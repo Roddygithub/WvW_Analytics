@@ -588,17 +588,26 @@ class EVTCParser:
                     alacrity_events += 1
                 elif event.skillid == BoonID.MIGHT:
                     might_events += 1
+                    # Debug: log first 5 Might events for first allied player
+                    if might_events <= 5 and event.dst_agent in player_stats:
+                        stats = player_stats[event.dst_agent]
+                        if stats.is_ally and stats.character_name:
+                            logger.debug(
+                                "Might event #%d for %s: time=%d, value=%d, is_shields=%d, overstack=%d, is_offcycle=%d",
+                                might_events, stats.character_name, event.time, event.value, 
+                                event.is_shields, event.overstack_value, event.is_offcycle
+                            )
                 elif event.skillid == BoonID.STABILITY:
                     stability_events += 1
                 
-                # Buff applied to dst_agent - USE SKILLID NOT BUFF!
+                # Buff applied to dst_agent - store (time, duration, stacks)
                 if event.dst_agent in player_stats:
                     if event.dst_agent not in active_boons:
                         active_boons[event.dst_agent] = {}
                     if event.skillid not in active_boons[event.dst_agent]:
                         active_boons[event.dst_agent][event.skillid] = []
-                    # Store (start_time, duration) for this buff application
-                    active_boons[event.dst_agent][event.skillid].append((event.time, event.value))
+                    # Store (start_time, duration, stack_count) - is_shields is the stack count!
+                    active_boons[event.dst_agent][event.skillid].append((event.time, event.value, event.is_shields))
             
             # Condition damage events (buff != 0, buff_dmg > 0)
             elif event.buff != 0 and event.buff_dmg > 0:
