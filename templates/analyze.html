@@ -6,15 +6,15 @@
 <div class="max-w-4xl mx-auto">
     <h1 class="text-xl font-bold text-gw2-gold mb-32">Analyze Logs</h1>
 
-    {% if upload_success %}
-    <div class="bg-surface-elevated border border-status-success rounded p-16 mb-24">
+    {% if upload_error %}
+    <div class="bg-surface-elevated border border-status-error rounded p-16 mb-24">
         <div class="flex items-center gap-12">
-            <svg class="w-24 h-24 text-status-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            <svg class="w-24 h-24 text-status-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
             <div>
-                <p class="text-base font-bold text-text-main">{{ filename }}</p>
-                <p class="text-sm text-text-muted">{{ message }}</p>
+                <p class="text-base font-bold text-text-main">Upload Failed</p>
+                <p class="text-sm text-text-muted">{{ error_message }}</p>
             </div>
         </div>
     </div>
@@ -63,6 +63,56 @@
             </div>
         </form>
     </div>
+
+    {% if recent_fights %}
+    <div class="bg-surface-elevated border border-border-subtle rounded p-32 mb-32">
+        <h2 class="text-lg font-bold text-text-main mb-24">Recent Fights</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-border-subtle">
+                        <th class="text-left text-sm font-bold text-text-muted pb-12 px-16">File</th>
+                        <th class="text-left text-sm font-bold text-text-muted pb-12 px-16">Uploaded</th>
+                        <th class="text-left text-sm font-bold text-text-muted pb-12 px-16">Context</th>
+                        <th class="text-left text-sm font-bold text-text-muted pb-12 px-16">Result</th>
+                        <th class="text-right text-sm font-bold text-text-muted pb-12 px-16">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fight in recent_fights %}
+                    <tr class="border-b border-border-subtle hover:bg-surface-main transition-colors">
+                        <td class="py-12 px-16 text-sm text-text-main">{{ fight.evtc_filename }}</td>
+                        <td class="py-12 px-16 text-sm text-text-muted font-tabular">
+                            {{ fight.upload_timestamp.strftime('%Y-%m-%d %H:%M') }}
+                        </td>
+                        <td class="py-12 px-16 text-sm text-text-muted">
+                            <span class="px-8 py-4 bg-surface-main rounded text-xs">
+                                {{ fight.context.value.replace('_', ' ').title() }}
+                            </span>
+                        </td>
+                        <td class="py-12 px-16 text-sm">
+                            {% if fight.result.value == 'victory' %}
+                            <span class="text-status-success">Victory</span>
+                            {% elif fight.result.value == 'defeat' %}
+                            <span class="text-status-error">Defeat</span>
+                            {% elif fight.result.value == 'draw' %}
+                            <span class="text-status-warning">Draw</span>
+                            {% else %}
+                            <span class="text-text-muted">Unknown</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-12 px-16 text-right">
+                            <a href="/analyze/fight/{{ fight.id }}" class="text-sm text-action-primary hover:text-action-primary-hover">
+                                View Details →
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="bg-surface-elevated border border-border-subtle rounded p-32">
         <h2 class="text-lg font-bold text-text-main mb-16">How It Works</h2>

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Fight #{{ fight_id }} - WvW Analytics{% endblock %}
+{% block title %}Fight #{{ fight.id }} - WvW Analytics{% endblock %}
 
 {% block content %}
 <div class="mb-32">
@@ -10,7 +10,39 @@
         </svg>
         Back to Analyze
     </a>
-    <h1 class="text-xl font-bold text-gw2-gold">Fight #{{ fight_id }}</h1>
+    <h1 class="text-xl font-bold text-gw2-gold mb-8">Fight #{{ fight.id }}</h1>
+    <p class="text-sm text-text-muted">{{ fight.evtc_filename }}</p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-16 mb-32">
+    <div class="bg-surface-elevated border border-border-subtle rounded p-16">
+        <div class="text-xs text-text-muted mb-8">Context</div>
+        <div class="text-base font-bold text-text-main">
+            {{ fight.context.value.replace('_', ' ').title() }}
+        </div>
+    </div>
+    <div class="bg-surface-elevated border border-border-subtle rounded p-16">
+        <div class="text-xs text-text-muted mb-8">Result</div>
+        <div class="text-base font-bold">
+            {% if fight.result.value == 'victory' %}
+            <span class="text-status-success">Victory</span>
+            {% elif fight.result.value == 'defeat' %}
+            <span class="text-status-error">Defeat</span>
+            {% elif fight.result.value == 'draw' %}
+            <span class="text-status-warning">Draw</span>
+            {% else %}
+            <span class="text-text-muted">Unknown</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="bg-surface-elevated border border-border-subtle rounded p-16">
+        <div class="text-xs text-text-muted mb-8">Allies</div>
+        <div class="text-base font-bold text-text-main font-tabular">{{ fight.ally_count }}</div>
+    </div>
+    <div class="bg-surface-elevated border border-border-subtle rounded p-16">
+        <div class="text-xs text-text-muted mb-8">Enemies</div>
+        <div class="text-base font-bold text-text-main font-tabular">{{ fight.enemy_count }}</div>
+    </div>
 </div>
 
 <div class="bg-surface-elevated border border-border-subtle rounded p-32 text-center">
@@ -18,8 +50,18 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
     </svg>
     <h2 class="text-lg font-bold text-text-main mb-8">Parser Not Yet Implemented</h2>
-    <p class="text-sm text-text-muted">
-        Fight detail view will be available after EVTC parser implementation
+    <p class="text-sm text-text-muted mb-24">
+        Detailed player statistics will be available after EVTC parser implementation in Step 4
     </p>
+    <div class="text-left max-w-md mx-auto">
+        <p class="text-xs text-text-muted mb-8">Coming soon:</p>
+        <ul class="space-y-4 text-xs text-text-muted">
+            <li>• Per-player DPS, damage, downs, deaths</li>
+            <li>• Boon uptimes (Stability, Quickness, Alacrity, Might, etc.)</li>
+            <li>• CC / Strips / Cleanses</li>
+            <li>• Outgoing healing and barrier</li>
+            <li>• Detected roles (DPS / Heal / Support / Boon / Strip)</li>
+        </ul>
+    </div>
 </div>
 {% endblock %}
