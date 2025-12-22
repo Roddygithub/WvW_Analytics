@@ -169,17 +169,43 @@ class EVTCParser:
         is_compressed = self.file_path.suffix == ".zevtc"
         
         if is_compressed:
+            import gzip
+            from io import BytesIO
+            
             with open(self.file_path, "rb") as f:
                 compressed_data = f.read()
+                
+                decompressed_data = None
+                errors = []
+                
                 try:
                     decompressed_data = zlib.decompress(compressed_data)
-                except zlib.error:
+                except zlib.error as e:
+                    errors.append(f"zlib standard: {e}")
+                
+                if decompressed_data is None:
                     try:
                         decompressed_data = zlib.decompress(compressed_data, -zlib.MAX_WBITS)
                     except zlib.error as e:
-                        raise EVTCParseError(f"Failed to decompress .zevtc file: {e}")
+                        errors.append(f"zlib raw deflate: {e}")
+                
+                if decompressed_data is None:
+                    try:
+                        decompressed_data = gzip.decompress(compressed_data)
+                    except Exception as e:
+                        errors.append(f"gzip: {e}")
+                
+                if decompressed_data is None:
+                    try:
+                        with gzip.open(self.file_path, 'rb') as gz:
+                            decompressed_data = gz.read()
+                    except Exception as e:
+                        errors.append(f"gzip file: {e}")
+                
+                if decompressed_data is None:
+                    error_msg = "Failed to decompress .zevtc file. Tried: " + "; ".join(errors)
+                    raise EVTCParseError(error_msg)
             
-            from io import BytesIO
             file_obj = BytesIO(decompressed_data)
         else:
             file_obj = open(self.file_path, "rb")
