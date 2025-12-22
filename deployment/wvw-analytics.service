@@ -1,0 +1,17 @@
+[Unit]
+Description=WvW Analytics - Guild Wars 2 Combat Analytics
+After=network.target postgresql.service
+
+[Service]
+Type=notify
+User=syff
+Group=syff
+WorkingDirectory=/home/syff/wvw-analytics
+Environment="PATH=/home/syff/wvw-analytics/venv/bin"
+EnvironmentFile=/home/syff/wvw-analytics/.env
+ExecStart=/home/syff/wvw-analytics/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
