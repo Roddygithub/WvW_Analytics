@@ -171,7 +171,13 @@ class EVTCParser:
         if is_compressed:
             with open(self.file_path, "rb") as f:
                 compressed_data = f.read()
-                decompressed_data = zlib.decompress(compressed_data)
+                try:
+                    decompressed_data = zlib.decompress(compressed_data)
+                except zlib.error:
+                    try:
+                        decompressed_data = zlib.decompress(compressed_data, -zlib.MAX_WBITS)
+                    except zlib.error as e:
+                        raise EVTCParseError(f"Failed to decompress .zevtc file: {e}")
             
             from io import BytesIO
             file_obj = BytesIO(decompressed_data)
