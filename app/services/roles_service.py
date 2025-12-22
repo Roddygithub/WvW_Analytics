@@ -51,6 +51,7 @@ def detect_player_role(stats: PlayerStats) -> Tuple[str, List[str]]:
     strips = stats.strips_out or 0
     quickness = stats.quickness_uptime or 0
     alacrity = stats.alacrity_uptime or 0
+    resistance = stats.resistance_uptime or 0
     
     # Check for Healer/Support role
     # High cleanses, low damage - focused on keeping group alive
@@ -59,13 +60,16 @@ def detect_player_role(stats: PlayerStats) -> Tuple[str, List[str]]:
         return "Healer/Support", role_tags
     
     # Check for Boon Support role
-    # High boon uptime, moderate/low damage - typical FB/chrono/alac builds
-    if (quickness >= BOON_MIN_UPTIME or alacrity >= BOON_MIN_UPTIME) and dps < BOON_MAX_DPS:
+    # High boon uptime, moderate/low damage - typical FB/chrono/scrapper builds
+    # In WvW: Quickness, Alacrity (rare), or Resistance are key support boons
+    if (quickness >= BOON_MIN_UPTIME or alacrity >= BOON_MIN_UPTIME or resistance >= BOON_MIN_UPTIME) and dps < BOON_MAX_DPS:
         role_tags.extend(["boon", "support"])
         if quickness >= BOON_MIN_UPTIME:
             role_tags.append("quickness")
         if alacrity >= BOON_MIN_UPTIME:
             role_tags.append("alacrity")
+        if resistance >= BOON_MIN_UPTIME:
+            role_tags.append("resistance")
         return "Boon Support", role_tags
     
     # Check for Stripper role
@@ -76,11 +80,10 @@ def detect_player_role(stats: PlayerStats) -> Tuple[str, List[str]]:
     
     # Check for DPS role
     # High damage, low support activity - pure damage dealers
+    # Note: We don't check boon uptimes here since players receive boons, not give them
     if (dps >= DPS_MIN_DPS and 
         cleanses < DPS_MAX_CLEANSES and 
-        strips < DPS_MAX_STRIPS and 
-        quickness < DPS_MAX_BOON_UPTIME and 
-        alacrity < DPS_MAX_BOON_UPTIME):
+        strips < DPS_MAX_STRIPS):
         role_tags.append("dps")
         return "DPS", role_tags
     
@@ -95,7 +98,7 @@ def detect_player_role(stats: PlayerStats) -> Tuple[str, List[str]]:
         role_tags.append("cleanses")
     if strips >= STRIPPER_MIN_STRIPS // 2:
         role_tags.append("strips")
-    if quickness >= BOON_MIN_UPTIME // 2 or alacrity >= BOON_MIN_UPTIME // 2:
+    if quickness >= BOON_MIN_UPTIME // 2 or alacrity >= BOON_MIN_UPTIME // 2 or resistance >= BOON_MIN_UPTIME // 2:
         role_tags.append("boons")
     
     return "Hybrid", role_tags
