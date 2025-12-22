@@ -4,8 +4,32 @@ import zipfile
 from io import BytesIO
 from pathlib import Path
 from typing import Optional, BinaryIO
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum
+
+
+class CombatResult(IntEnum):
+    """Combat result types from EVTC spec."""
+    NORMAL = 0
+    CRIT = 1
+    GLANCE = 2
+    BLOCK = 3
+    EVADE = 4
+    INTERRUPT = 5
+    ABSORB = 6
+    BLIND = 7
+    KILLINGBLOW = 8
+    DOWNED = 9
+    BREAKBAR = 10
+    ACTIVATION = 11
+    CROWDCONTROL = 12
+
+
+class IFF(IntEnum):
+    """Friend/Foe affinity from EVTC spec."""
+    FRIEND = 0
+    FOE = 1
+    UNKNOWN = 2
 
 
 class StateChange(IntEnum):
@@ -105,6 +129,16 @@ class EVTCAgent:
         if self.is_npc:
             return self.prof & 0xFFFF
         return 0
+    
+    def parse_player_name(self) -> tuple[str, str, int]:
+        """Parse player name combo string: character\x00account\x00subgroup\x00."""
+        parts = self.name.split('\x00')
+        character_name = parts[0] if len(parts) > 0 else ""
+        account_name = parts[1] if len(parts) > 1 else ""
+        subgroup = 0
+        if len(parts) > 2 and parts[2].isdigit():
+            subgroup = int(parts[2])
+        return character_name, account_name, subgroup
 
 
 @dataclass
@@ -112,6 +146,23 @@ class EVTCSkill:
     """Skill from EVTC skill table."""
     id: int
     name: str
+
+
+@dataclass
+class PlayerStatsData:
+    """Aggregated statistics for a single player."""
+    addr: int
+    character_name: str = ""
+    account_name: str = ""
+    profession: int = 0
+    elite_spec: int = 0
+    subgroup: int = 0
+    
+    total_damage: int = 0
+    damage_taken: int = 0
+    downs: int = 0
+    kills: int = 0
+    deaths: int = 0
 
 
 @dataclass
@@ -395,3 +446,65 @@ class EVTCParser:
             if event.is_statechange == StateChange.SQCOMBATEND:
                 return event.time
         return None
+    
+    def extract_player_stats(self) -> dict[int, PlayerStatsData]:
+        """
+        Extract per-player statistics from combat events.
+        
+        Returns:
+            Dictionary mapping agent address to PlayerStatsData
+        """
+        player_stats: dict[int, PlayerStatsData] = {}
+        
+        # Initialize stats for all player agents
+        for agent in self.agents:
+            if agent.is_player:
+                char_name, acc_name, subgroup = agent.parse_player_name()
+                player_stats[agent.addr] = PlayerStatsData(
+                    addr=agent.addr,
+                    character_name=char_name,
+                    account_name=acc_name,
+                    profession=agent.prof,
+                    elite_spec=agent.is_elite,
+                    subgroup=subgroup
+                )
+        
+        # Process all combat events
+        for event in self.events:
+            # Handle state changes first
+            if event.is_statechange != StateChange.NONE:
+                if event.is_statechange == StateChange.CHANGEDEAD:
+                    # Player death
+                    if event.src_agent in player_stats:
+                        player_stats[event.src_agent].deaths += 1
+                continue
+            
+            # Skip activation and buff remove events for damage calculation
+            if event.is_activation != 0 or event.is_buffremove != 0:
+                continue
+            
+            # Direct damage events (buff == 0)
+            if event.buff == 0 and event.value > 0:
+                # Damage dealt by player
+                if event.src_agent in player_stats:
+                    player_stats[event.src_agent].total_damage += event.value
+                
+                # Damage taken by player
+                if event.dst_agent in player_stats:
+                    player_stats[event.dst_agent].damage_taken += event.value
+                
+                # Check for downs and kills
+                if event.result == CombatResult.DOWNED:
+                    if event.src_agent in player_stats:
+                        player_stats[event.src_agent].downs += 1
+                elif event.result == CombatResult.KILLINGBLOW:
+                    if event.src_agent in player_stats:
+                        player_stats[event.src_agent].kills += 1
+            
+            # Condition damage events (buff != 0, buff_dmg > 0)
+            elif event.buff != 0 and event.buff_dmg > 0:
+                # Condition damage dealt by player
+                if event.src_agent in player_stats:
+                    player_stats[event.src_agent].total_damage += event.buff_dmg
+        
+        return player_stats
