@@ -298,6 +298,17 @@ class PlayerStatsData:
     cc_total: int = 0  # Breakbar damage dealt
     healing_out: int = 0  # Healing output
     barrier_out: int = 0  # Barrier output
+    
+    # Outgoing boon production (what this player gives to others, in milliseconds)
+    stab_out_ms: int = 0  # Stability given to allies
+    aegis_out_ms: int = 0  # Aegis given to allies
+    protection_out_ms: int = 0  # Protection given to allies
+    quickness_out_ms: int = 0  # Quickness given to allies
+    alacrity_out_ms: int = 0  # Alacrity given to allies
+    resistance_out_ms: int = 0  # Resistance given to allies
+    might_out_stacks: int = 0  # Might stacks given to allies (sum of stacks * duration)
+    fury_out_ms: int = 0  # Fury given to allies
+    regeneration_out_ms: int = 0  # Regeneration given to allies
 
 
 @dataclass
@@ -634,8 +645,11 @@ class EVTCParser:
                     is_ally=is_ally
                 )
         
-        # Track active boons per player: {player_addr: {buff_id: [(start_time, duration, stack_info), ...]}}
+        # Track active boons per player (received): {player_addr: {buff_id: [(start_time, duration, stack_info), ...]}}
         active_boons: dict[int, dict[int, list[tuple[int, int]]]] = {}
+        
+        # Track outgoing boons per player (given): {src_player_addr: {buff_id: [(dst_player, duration, stacks), ...]}}
+        outgoing_boons: dict[int, dict[int, list[tuple[int, int, int]]]] = {}
         
         # Process all combat events
         for event in self.events:
@@ -748,7 +762,7 @@ class EVTCParser:
                 elif event.skillid == BoonID.STABILITY:
                     stability_events += 1
                 
-                # Buff applied to dst_agent - store (time, duration, stacks)
+                # Buff applied to dst_agent - store (time, duration, stacks) for RECEIVED boons
                 if event.dst_agent in player_stats:
                     if event.dst_agent not in active_boons:
                         active_boons[event.dst_agent] = {}
@@ -756,6 +770,21 @@ class EVTCParser:
                         active_boons[event.dst_agent][event.skillid] = []
                     # Store (start_time, duration, stack_count) - is_shields is the stack count!
                     active_boons[event.dst_agent][event.skillid].append((event.time, event.value, event.is_shields))
+                
+                # Track OUTGOING boons: src_agent gave boon to dst_agent
+                # Only track if both are allied players and the boon is relevant
+                if (event.src_agent in player_stats and event.dst_agent in player_stats and
+                    player_stats[event.src_agent].is_ally and player_stats[event.dst_agent].is_ally):
+                    
+                    if event.src_agent not in outgoing_boons:
+                        outgoing_boons[event.src_agent] = {}
+                    if event.skillid not in outgoing_boons[event.src_agent]:
+                        outgoing_boons[event.src_agent][event.skillid] = []
+                    
+                    # Store (dst_player, duration, stack_count)
+                    # For Might, is_shields is the stack count; for others it's 1
+                    stack_count = event.is_shields if event.skillid == BoonID.MIGHT else 1
+                    outgoing_boons[event.src_agent][event.skillid].append((event.dst_agent, event.value, stack_count))
             
             # Condition damage events (buff != 0, buff_dmg > 0)
             elif event.buff != 0 and event.buff_dmg > 0:
@@ -831,6 +860,49 @@ class EVTCParser:
                 # Store for service layer calculation
                 stats.might_total_stacks = int(total_stack_time)
                 stats.might_sample_count = 1  # Use 1 to indicate we have data
+        
+        # Calculate OUTGOING boon production from outgoing_boons tracking
+        for player_addr, stats in player_stats.items():
+            if player_addr not in outgoing_boons:
+                continue
+            
+            player_outgoing = outgoing_boons[player_addr]
+            
+            # Stability outgoing
+            if BoonID.STABILITY in player_outgoing:
+                stats.stab_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.STABILITY])
+            
+            # Aegis outgoing
+            if BoonID.AEGIS in player_outgoing:
+                stats.aegis_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.AEGIS])
+            
+            # Protection outgoing
+            if BoonID.PROTECTION in player_outgoing:
+                stats.protection_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.PROTECTION])
+            
+            # Quickness outgoing
+            if BoonID.QUICKNESS in player_outgoing:
+                stats.quickness_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.QUICKNESS])
+            
+            # Alacrity outgoing
+            if BoonID.ALACRITY in player_outgoing:
+                stats.alacrity_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.ALACRITY])
+            
+            # Resistance outgoing
+            if BoonID.RESISTANCE in player_outgoing:
+                stats.resistance_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.RESISTANCE])
+            
+            # Fury outgoing
+            if BoonID.FURY in player_outgoing:
+                stats.fury_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.FURY])
+            
+            # Regeneration outgoing
+            if BoonID.REGENERATION in player_outgoing:
+                stats.regeneration_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.REGENERATION])
+            
+            # Might outgoing - sum of (stacks * duration) for all applications
+            if BoonID.MIGHT in player_outgoing:
+                stats.might_out_stacks = sum(duration * stacks for _, duration, stacks in player_outgoing[BoonID.MIGHT])
         
         logger.info(
             "EVTC debug for %s: events=%d, direct=%d, ally_to_enemy=%d, changedown=%d, changedead=%d, res_downed=%d, res_killingblow=%d",

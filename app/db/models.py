@@ -89,6 +89,17 @@ class PlayerStats(Base):
     resolution_uptime = Column(Float, default=0.0, nullable=False)
     vigor_uptime = Column(Float, default=0.0, nullable=False)
     
+    # Outgoing boon production (milliseconds given to allies)
+    stab_out_ms = Column(Integer, default=0, nullable=False)
+    aegis_out_ms = Column(Integer, default=0, nullable=False)
+    protection_out_ms = Column(Integer, default=0, nullable=False)
+    quickness_out_ms = Column(Integer, default=0, nullable=False)
+    alacrity_out_ms = Column(Integer, default=0, nullable=False)
+    resistance_out_ms = Column(Integer, default=0, nullable=False)
+    might_out_stacks = Column(Integer, default=0, nullable=False)
+    fury_out_ms = Column(Integer, default=0, nullable=False)
+    regeneration_out_ms = Column(Integer, default=0, nullable=False)
+    
     detected_role = Column(String, nullable=True)
     
     fight = relationship("Fight", back_populates="player_stats")

@@ -189,6 +189,15 @@ def process_log_file_sync(
                 cc_total=stats.cc_total,
                 healing_out=stats.healing_out,
                 barrier_out=stats.barrier_out,
+                stab_out_ms=stats.stab_out_ms,
+                aegis_out_ms=stats.aegis_out_ms,
+                protection_out_ms=stats.protection_out_ms,
+                quickness_out_ms=stats.quickness_out_ms,
+                alacrity_out_ms=stats.alacrity_out_ms,
+                resistance_out_ms=stats.resistance_out_ms,
+                might_out_stacks=stats.might_out_stacks,
+                fury_out_ms=stats.fury_out_ms,
+                regeneration_out_ms=stats.regeneration_out_ms,
             )
             db.add(player_stat)
             
