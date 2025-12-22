@@ -16,9 +16,9 @@ import hashlib
 
 from sqlalchemy.orm import Session
 
-from app.db.database import SessionLocal, engine
+from app.db.base import SessionLocal, engine
 from app.db.models import Base, Fight
-from app.services.logs_service import process_log_file
+from app.services.logs_service import process_log_file_sync
 
 
 def compute_file_hash(file_path: Path) -> str:
@@ -76,7 +76,7 @@ def bulk_import_logs(directory: str, db: Session) -> dict:
         print(f"[{idx}/{len(all_files)}] 🔄 Processing: {filename}")
         
         try:
-            fight, error = process_log_file(file_path, db)
+            fight, error = process_log_file_sync(file_path, db)
             
             if error:
                 print(f"   ❌ Error: {error}")

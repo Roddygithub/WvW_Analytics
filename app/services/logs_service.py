@@ -72,12 +72,12 @@ def is_wvw_log(file_path: Path) -> tuple[bool, Optional[str]]:
         return False, f"Failed to parse EVTC file: {str(e)}"
 
 
-async def process_log_file(
+def process_log_file_sync(
     file_path: Path,
     db: Session
 ) -> tuple[Optional[Fight], Optional[str]]:
     """
-    Process uploaded log file and extract basic metrics.
+    Process uploaded log file and extract basic metrics (synchronous version).
     
     Returns:
         (fight_record, error_message)
@@ -203,6 +203,19 @@ async def process_log_file(
         return None, f"EVTC parse error: {str(e)}"
     except Exception as e:
         return None, f"Failed to process log file: {str(e)}"
+
+
+async def process_log_file(
+    file_path: Path,
+    db: Session
+) -> tuple[Optional[Fight], Optional[str]]:
+    """
+    Process uploaded log file and extract basic metrics (async wrapper).
+    
+    Returns:
+        (fight_record, error_message)
+    """
+    return process_log_file_sync(file_path, db)
 
 
 def get_fight_by_id(db: Session, fight_id: int) -> Optional[Fight]:

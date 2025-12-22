@@ -12,7 +12,7 @@ import sys
 import csv
 from pathlib import Path
 
-from app.db.database import SessionLocal, engine
+from app.db.base import SessionLocal, engine
 from app.db.models import Base, PlayerStats
 
 
