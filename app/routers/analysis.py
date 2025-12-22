@@ -31,12 +31,18 @@ async def upload_log(
     db: Session = Depends(get_db)
 ) -> HTMLResponse:
     """Upload and analyze a log file."""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
+        logger.info(f"Uploading file: {file.filename}")
         file_path = await logs_service.save_upload_file(file)
+        logger.info(f"File saved to: {file_path}")
         
         fight, error = await logs_service.process_log_file(file_path, db)
         
         if error:
+            logger.error(f"Processing error: {error}")
             recent_fights = logs_service.get_recent_fights(db, limit=10)
             return templates.TemplateResponse(
                 "analyze.html",
@@ -56,6 +62,7 @@ async def upload_log(
         )
         
     except Exception as e:
+        logger.exception(f"Upload exception: {str(e)}")
         recent_fights = logs_service.get_recent_fights(db, limit=10)
         return templates.TemplateResponse(
             "analyze.html",
