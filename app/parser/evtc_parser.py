@@ -1,5 +1,7 @@
 import struct
 import zlib
+import zipfile
+from io import BytesIO
 from pathlib import Path
 from typing import Optional, BinaryIO
 from dataclasses import dataclass
@@ -169,44 +171,21 @@ class EVTCParser:
         is_compressed = self.file_path.suffix == ".zevtc"
         
         if is_compressed:
-            import gzip
-            from io import BytesIO
-            
-            with open(self.file_path, "rb") as f:
-                compressed_data = f.read()
-                
-                decompressed_data = None
-                errors = []
-                
-                try:
-                    decompressed_data = zlib.decompress(compressed_data)
-                except zlib.error as e:
-                    errors.append(f"zlib standard: {e}")
-                
-                if decompressed_data is None:
-                    try:
-                        decompressed_data = zlib.decompress(compressed_data, -zlib.MAX_WBITS)
-                    except zlib.error as e:
-                        errors.append(f"zlib raw deflate: {e}")
-                
-                if decompressed_data is None:
-                    try:
-                        decompressed_data = gzip.decompress(compressed_data)
-                    except Exception as e:
-                        errors.append(f"gzip: {e}")
-                
-                if decompressed_data is None:
-                    try:
-                        with gzip.open(self.file_path, 'rb') as gz:
-                            decompressed_data = gz.read()
-                    except Exception as e:
-                        errors.append(f"gzip file: {e}")
-                
-                if decompressed_data is None:
-                    error_msg = "Failed to decompress .zevtc file. Tried: " + "; ".join(errors)
-                    raise EVTCParseError(error_msg)
-            
-            file_obj = BytesIO(decompressed_data)
+            # .zevtc files are ZIP archives containing a single .evtc file
+            try:
+                with zipfile.ZipFile(self.file_path, "r") as zf:
+                    names = zf.namelist()
+                    if not names:
+                        raise EVTCParseError(".zevtc archive is empty")
+                    inner_name = names[0]
+                    with zf.open(inner_name, "r") as inner:
+                        inner_data = inner.read()
+            except zipfile.BadZipFile as e:
+                raise EVTCParseError(f"Invalid .zevtc ZIP archive: {e}")
+            except Exception as e:
+                raise EVTCParseError(f"Failed to read .zevtc archive: {e}")
+
+            file_obj = BytesIO(inner_data)
         else:
             file_obj = open(self.file_path, "rb")
         
