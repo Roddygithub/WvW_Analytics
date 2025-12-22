@@ -624,31 +624,31 @@ class EVTCParser:
             
             # Stability
             if BoonID.STABILITY in player_boons:
-                stats.stability_uptime_ms = sum(duration for _, duration in player_boons[BoonID.STABILITY])
+                stats.stability_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.STABILITY])
             
             # Quickness
             if BoonID.QUICKNESS in player_boons:
-                stats.quickness_uptime_ms = sum(duration for _, duration in player_boons[BoonID.QUICKNESS])
+                stats.quickness_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.QUICKNESS])
             
             # Aegis
             if BoonID.AEGIS in player_boons:
-                stats.aegis_uptime_ms = sum(duration for _, duration in player_boons[BoonID.AEGIS])
+                stats.aegis_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.AEGIS])
             
             # Protection
             if BoonID.PROTECTION in player_boons:
-                stats.protection_uptime_ms = sum(duration for _, duration in player_boons[BoonID.PROTECTION])
+                stats.protection_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.PROTECTION])
             
             # Fury
             if BoonID.FURY in player_boons:
-                stats.fury_uptime_ms = sum(duration for _, duration in player_boons[BoonID.FURY])
+                stats.fury_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.FURY])
             
             # Resistance
             if BoonID.RESISTANCE in player_boons:
-                stats.resistance_uptime_ms = sum(duration for _, duration in player_boons[BoonID.RESISTANCE])
+                stats.resistance_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.RESISTANCE])
             
             # Alacrity
             if BoonID.ALACRITY in player_boons:
-                stats.alacrity_uptime_ms = sum(duration for _, duration in player_boons[BoonID.ALACRITY])
+                stats.alacrity_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.ALACRITY])
             
             # Might - calculate average stacks using proper time-weighted algorithm
             if BoonID.MIGHT in player_boons:
