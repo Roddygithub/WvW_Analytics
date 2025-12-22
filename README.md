@@ -45,3 +45,4 @@ uvicorn app.main:app --reload
 - **WvW-Only**: Focused exclusively on WvW combat
 - **Clean Architecture**: Maintainable, professional codebase
 - **GW2 Aesthetic**: Dark fantasy theme (red/black/gold, parchment tones)
+# Test auto-deploy
