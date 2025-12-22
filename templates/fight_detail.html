@@ -64,9 +64,9 @@
 </div>
 
 {% if fight.player_stats %}
-<div class="bg-surface-elevated border border-border-subtle rounded overflow-hidden">
+<div class="bg-surface-elevated border border-border-subtle rounded overflow-hidden mb-32">
     <div class="p-24 border-b border-border-subtle">
-        <h2 class="text-lg font-bold text-text-main">Player Statistics</h2>
+        <h2 class="text-lg font-bold text-text-main">Allied Players</h2>
     </div>
     <div class="overflow-x-auto relative">
         <div class="absolute top-0 right-0 bottom-0 w-32 bg-gradient-to-l from-surface-elevated to-transparent pointer-events-none"></div>
@@ -164,6 +164,102 @@
         </table>
     </div>
 </div>
+
+<!-- Enemy Players Section -->
+{% set enemy_players = fight.player_stats | rejectattr('account_name') | list %}
+{% if enemy_players %}
+<div class="bg-surface-elevated border border-border-subtle rounded overflow-hidden">
+    <div class="p-24 border-b border-border-subtle">
+        <h2 class="text-lg font-bold text-text-main">Enemy Players</h2>
+    </div>
+    <div class="overflow-x-auto relative">
+        <div class="absolute top-0 right-0 bottom-0 w-32 bg-gradient-to-l from-surface-elevated to-transparent pointer-events-none"></div>
+        <table class="w-full text-sm">
+            <thead class="bg-surface-base border-b border-border-subtle">
+                <tr class="text-left">
+                    <th class="px-16 py-12 font-semibold text-text-main cursor-pointer hover:bg-surface-elevated transition-colors">
+                        <div class="inline-flex items-center gap-8">
+                            Character/Profession
+                            <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                        <div class="inline-flex items-center gap-8 justify-end">
+                            DPS
+                            <svg class="w-16 h-16 text-gw2-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                        <div class="inline-flex items-center gap-8 justify-end">
+                            Damage
+                            <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                        <div class="inline-flex items-center gap-8 justify-end">
+                            Downs
+                            <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                        <div class="inline-flex items-center gap-8 justify-end">
+                            Kills
+                            <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                        <div class="inline-flex items-center gap-8 justify-end">
+                            Deaths
+                            <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                        <div class="inline-flex items-center gap-8 justify-end">
+                            Dmg Taken
+                            <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                            </svg>
+                        </div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for player in enemy_players | sort(attribute='dps', reverse=True) %}
+                <tr class="border-b border-border-subtle hover:bg-surface-base transition-colors">
+                    <td class="px-16 py-12 text-status-error">{{ player.character_name if player.character_name else 'Unknown' }}</td>
+                    <td class="px-16 py-12 text-right text-gw2-gold font-bold font-tabular">
+                        {{ '{:,.0f}'.format(player.dps) }}
+                    </td>
+                    <td class="px-16 py-12 text-right text-text-main font-tabular">
+                        {{ '{:,.0f}'.format(player.total_damage) }}
+                    </td>
+                    <td class="px-16 py-12 text-right text-text-main font-tabular">{{ player.downs }}</td>
+                    <td class="px-16 py-12 text-right text-text-main font-tabular">{{ player.kills }}</td>
+                    <td class="px-16 py-12 text-right {% if player.deaths > 0 %}text-status-error{% else %}text-text-main{% endif %} font-tabular">
+                        {{ player.deaths }}
+                    </td>
+                    <td class="px-16 py-12 text-right text-text-muted font-tabular">
+                        {{ '{:,.0f}'.format(player.damage_taken) }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
 {% else %}
 <div class="bg-surface-elevated border border-border-subtle rounded p-32 text-center">
     <svg class="w-48 h-48 mx-auto mb-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
