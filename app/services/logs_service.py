@@ -83,6 +83,7 @@ async def process_log_file(
         (fight_record, error_message)
     """
     from app.parser.evtc_parser import EVTCParser, EVTCParseError
+    from app.services.roles_service import detect_player_role
     
     is_valid, error = validate_evtc_file(file_path)
     if not is_valid:
@@ -189,6 +190,10 @@ async def process_log_file(
                 barrier_out=stats.barrier_out,
             )
             db.add(player_stat)
+            
+            # Detect and assign role after stats are set
+            primary_role, role_tags = detect_player_role(player_stat)
+            player_stat.detected_role = primary_role
         
         db.commit()
         
