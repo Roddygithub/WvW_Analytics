@@ -25,22 +25,57 @@
 <div class="grid grid-cols-1 md:grid-cols-4 gap-16 mb-32">
     <div class="bg-surface-elevated border border-border-subtle rounded p-16">
         <div class="text-xs text-text-muted mb-8">Total Fights</div>
-        <div class="text-xl font-bold text-text-main font-tabular">0</div>
+        <div class="text-xl font-bold text-text-main font-tabular">{{ stats.total_fights }}</div>
     </div>
     <div class="bg-surface-elevated border border-border-subtle rounded p-16">
         <div class="text-xs text-text-muted mb-8">Wins</div>
-        <div class="text-xl font-bold text-status-success font-tabular">0</div>
+        <div class="text-xl font-bold text-status-success font-tabular">{{ stats.total_wins }}</div>
     </div>
     <div class="bg-surface-elevated border border-border-subtle rounded p-16">
         <div class="text-xs text-text-muted mb-8">Losses</div>
-        <div class="text-xl font-bold text-status-error font-tabular">0</div>
+        <div class="text-xl font-bold text-status-error font-tabular">{{ stats.total_losses }}</div>
     </div>
     <div class="bg-surface-elevated border border-border-subtle rounded p-16">
         <div class="text-xs text-text-muted mb-8">Unique Players</div>
-        <div class="text-xl font-bold text-text-main font-tabular">0</div>
+        <div class="text-xl font-bold text-text-main font-tabular">{{ stats.unique_players }}</div>
     </div>
 </div>
 
+{% if stats.total_fights > 0 %}
+<div class="grid grid-cols-1 md:grid-cols-2 gap-24 mb-32">
+    <div class="bg-surface-elevated border border-border-subtle rounded p-32">
+        <h2 class="text-lg font-bold text-text-main mb-24">Top Specializations</h2>
+        {% if stats.top_specs %}
+        <div class="space-y-12">
+            {% for spec_data in stats.top_specs %}
+            <div class="flex items-center justify-between">
+                <span class="text-sm text-text-main">{{ spec_data.spec or 'Unknown' }}</span>
+                <span class="text-sm text-text-muted font-tabular">{{ spec_data.count }} plays</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-text-muted">No specialization data available</p>
+        {% endif %}
+    </div>
+
+    <div class="bg-surface-elevated border border-border-subtle rounded p-32">
+        <h2 class="text-lg font-bold text-text-main mb-24">Role Distribution</h2>
+        {% if stats.role_distribution %}
+        <div class="space-y-12">
+            {% for role, count in stats.role_distribution.items() %}
+            <div class="flex items-center justify-between">
+                <span class="text-sm text-text-main">{{ role.title() }}</span>
+                <span class="text-sm text-text-muted font-tabular">{{ count }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-text-muted">No role data available</p>
+        {% endif %}
+    </div>
+</div>
+{% else %}
 <div class="bg-surface-elevated border border-border-subtle rounded p-32 text-center">
     <svg class="w-48 h-48 mx-auto mb-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -56,4 +91,5 @@
         Upload Logs
     </a>
 </div>
+{% endif %}
 {% endblock %}
