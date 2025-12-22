@@ -59,23 +59,59 @@
     </div>
 </div>
 
+{% if fight.player_stats %}
+<div class="bg-surface-elevated border border-border-subtle rounded overflow-hidden">
+    <div class="p-24 border-b border-border-subtle">
+        <h2 class="text-lg font-bold text-text-main">Player Statistics</h2>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-surface-base border-b border-border-subtle">
+                <tr class="text-left">
+                    <th class="px-16 py-12 font-semibold text-text-main">Character</th>
+                    <th class="px-16 py-12 font-semibold text-text-main">Account</th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">DPS</th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">Damage</th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">Downs</th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">Kills</th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">Deaths</th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">Dmg Taken</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for player in fight.player_stats | sort(attribute='dps', reverse=True) %}
+                <tr class="border-b border-border-subtle hover:bg-surface-base transition-colors">
+                    <td class="px-16 py-12 text-text-main">{{ player.character_name }}</td>
+                    <td class="px-16 py-12 text-text-muted text-xs">{{ player.account_name }}</td>
+                    <td class="px-16 py-12 text-right text-gw2-gold font-bold font-tabular">
+                        {{ '{:,.0f}'.format(player.dps) }}
+                    </td>
+                    <td class="px-16 py-12 text-right text-text-main font-tabular">
+                        {{ '{:,.0f}'.format(player.total_damage) }}
+                    </td>
+                    <td class="px-16 py-12 text-right text-text-main font-tabular">{{ player.downs }}</td>
+                    <td class="px-16 py-12 text-right text-text-main font-tabular">{{ player.kills }}</td>
+                    <td class="px-16 py-12 text-right {% if player.deaths > 0 %}text-status-error{% else %}text-text-main{% endif %} font-tabular">
+                        {{ player.deaths }}
+                    </td>
+                    <td class="px-16 py-12 text-right text-text-muted font-tabular">
+                        {{ '{:,.0f}'.format(player.damage_taken) }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
 <div class="bg-surface-elevated border border-border-subtle rounded p-32 text-center">
     <svg class="w-48 h-48 mx-auto mb-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
     </svg>
-    <h2 class="text-lg font-bold text-text-main mb-8">Parser Not Yet Implemented</h2>
-    <p class="text-sm text-text-muted mb-24">
-        Detailed player statistics will be available after EVTC parser implementation in Step 4
+    <h2 class="text-lg font-bold text-text-main mb-8">No Player Stats Available</h2>
+    <p class="text-sm text-text-muted">
+        This fight was uploaded before player stats extraction was implemented.
     </p>
-    <div class="text-left max-w-md mx-auto">
-        <p class="text-xs text-text-muted mb-8">Coming soon:</p>
-        <ul class="space-y-4 text-xs text-text-muted">
-            <li>• Per-player DPS, damage, downs, deaths</li>
-            <li>• Boon uptimes (Stability, Quickness, Alacrity, Might, etc.)</li>
-            <li>• CC / Strips / Cleanses</li>
-            <li>• Outgoing healing and barrier</li>
-            <li>• Detected roles (DPS / Heal / Support / Boon / Strip)</li>
-        </ul>
-    </div>
 </div>
+{% endif %}
 {% endblock %}
