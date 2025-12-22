@@ -71,16 +71,6 @@ class BuffRemove(IntEnum):
     SINGLE = 2  # Single stack removed
     MANUAL = 3  # Manual remove (ignore for strip/cleanse)
     UNKNOWN = 4
-    HEALTHPCTUPDATE = 8
-    SQCOMBATSTART = 9
-    SQCOMBATEND = 10
-    WEAPSWAP = 11
-    MAXHEALTHUPDATE = 12
-    POINTOFVIEW = 13
-    LANGUAGE = 14
-    GWBUILD = 15
-    SHARDID = 16
-    REWARD = 17
     BUFFINITIAL = 18
     POSITION = 19
     VELOCITY = 20
