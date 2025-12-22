@@ -7,7 +7,7 @@ from datetime import datetime
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
-from app.db.models import Fight, FightContext, FightResult
+from app.db.models import Fight, FightContext, FightResult, PlayerStats
 
 
 UPLOAD_DIR = Path("uploads")
@@ -119,6 +119,33 @@ async def process_log_file(
         db.add(fight)
         db.commit()
         db.refresh(fight)
+        
+        # Extract and save player stats
+        player_stats_data = parser.extract_player_stats()
+        
+        for addr, stats in player_stats_data.items():
+            # Calculate DPS
+            dps = 0.0
+            if duration_ms and duration_ms > 0:
+                dps = (stats.total_damage / duration_ms) * 1000  # Convert to per-second
+            
+            player_stat = PlayerStats(
+                fight_id=fight.id,
+                character_name=stats.character_name,
+                account_name=stats.account_name,
+                profession=str(stats.profession),
+                elite_spec=str(stats.elite_spec),
+                subgroup=stats.subgroup,
+                total_damage=stats.total_damage,
+                dps=dps,
+                downs=stats.downs,
+                kills=stats.kills,
+                deaths=stats.deaths,
+                damage_taken=stats.damage_taken,
+            )
+            db.add(player_stat)
+        
+        db.commit()
         
         return fight, None
         
