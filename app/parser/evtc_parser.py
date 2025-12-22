@@ -59,6 +59,18 @@ class StateChange(IntEnum):
     CHANGEDOWN = 5
     SPAWN = 6
     DESPAWN = 7
+    BREAKBARSTATE = 36
+    BREAKBARPERCENT = 37
+    BARRIERPCTUPDATE = 40
+
+
+class BuffRemove(IntEnum):
+    """Buff remove types from EVTC spec."""
+    NONE = 0
+    ALL = 1  # All stacks removed
+    SINGLE = 2  # Single stack removed
+    MANUAL = 3  # Manual remove (ignore for strip/cleanse)
+    UNKNOWN = 4
     HEALTHPCTUPDATE = 8
     SQCOMBATSTART = 9
     SQCOMBATEND = 10
@@ -192,6 +204,13 @@ class PlayerStatsData:
     alacrity_uptime_ms: int = 0
     might_total_stacks: int = 0  # Sum of all might stacks over time
     might_sample_count: int = 0  # Number of samples for averaging
+    
+    # Support/Control stats
+    strips: int = 0  # Boons removed from enemies
+    cleanses: int = 0  # Conditions removed from allies
+    cc_total: int = 0  # Breakbar damage dealt
+    healing_out: int = 0  # Healing output
+    barrier_out: int = 0  # Barrier output
 
 
 @dataclass
@@ -525,7 +544,31 @@ class EVTCParser:
         
         # Process all combat events
         for event in self.events:
-            # Handle state changes first
+            # Handle buff remove events (strips/cleanses)
+            if event.is_buffremove != BuffRemove.NONE and event.is_buffremove != BuffRemove.MANUAL:
+                # Skip manual removes for strip/cleanse calculation
+                if event.dst_agent in player_stats and event.src_agent in player_stats:
+                    src_stats = player_stats[event.src_agent]
+                    dst_stats = player_stats[event.dst_agent]
+                    
+                    if src_stats.is_ally:
+                        # Check if it's a strip (removing from enemy) or cleanse (removing from ally)
+                        if not dst_stats.is_ally:
+                            # Strip: ally removing buff from enemy
+                            if event.is_buffremove == BuffRemove.ALL:
+                                src_stats.strips += event.result if event.result > 0 else 1
+                            else:  # SINGLE
+                                src_stats.strips += 1
+                        else:
+                            # Cleanse: ally removing condition from ally
+                            # TODO: Need to identify if buff is a condition (negative effect)
+                            if event.is_buffremove == BuffRemove.ALL:
+                                src_stats.cleanses += event.result if event.result > 0 else 1
+                            else:  # SINGLE
+                                src_stats.cleanses += 1
+                continue
+            
+            # Handle state changes
             if event.is_statechange != StateChange.NONE:
                 if event.is_statechange == StateChange.CHANGEDEAD:
                     changedead_events += 1
@@ -536,6 +579,10 @@ class EVTCParser:
                             stats.deaths += 1
                 elif event.is_statechange == StateChange.CHANGEDOWN:
                     changedown_events += 1
+                elif event.is_statechange == StateChange.BARRIERPCTUPDATE:
+                    # Barrier application - track source if available
+                    # Note: This state change doesn't directly give us the source
+                    pass
                 continue
             
             # Skip activation and buff remove events for damage calculation
@@ -559,6 +606,13 @@ class EVTCParser:
                 dst_stats = player_stats.get(event.dst_agent)
                 if src_stats and src_stats.is_ally and dst_stats and not dst_stats.is_ally:
                     ally_to_enemy_damage_events += 1
+                
+                # Check for breakbar damage
+                if event.result == CombatResult.BREAKBAR:
+                    if event.src_agent in player_stats:
+                        stats = player_stats[event.src_agent]
+                        if stats.is_ally:
+                            stats.cc_total += event.value if event.value > 0 else 0
                 
                 # Check for downs and kills (only count if target is enemy = IFF_FOE)
                 if event.result == CombatResult.DOWNED and event.iff == IFF.FOE:
