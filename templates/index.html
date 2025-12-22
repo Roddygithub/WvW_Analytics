@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Home - WvW Analytics{% endblock %}
+
+{% block content %}
+<div class="text-center py-64">
+    <h1 class="text-xl font-bold text-gw2-gold mb-24">
+        WvW Analytics
+    </h1>
+    <p class="text-lg text-text-main mb-16 max-w-2xl mx-auto">
+        Professional combat analytics for Guild Wars 2 World vs World
+    </p>
+    <p class="text-base text-text-muted mb-48 max-w-2xl mx-auto">
+        Upload your EVTC logs to analyze fights, track performance, and explore META trends across Zerg, Guild Raid, and Roam contexts.
+    </p>
+    
+    <div class="flex justify-center gap-16">
+        <a href="/analyze" class="inline-flex items-center gap-8 px-24 py-12 bg-action-primary hover:bg-action-primary-hover text-white rounded transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-action-primary">
+            <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+            Upload Logs
+        </a>
+        <a href="/meta/zerg" class="inline-flex items-center gap-8 px-24 py-12 bg-surface-elevated hover:bg-surface-main border border-border-subtle text-text-main rounded transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-border-subtle">
+            <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            View META
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-24 mt-64">
+    <div class="bg-surface-elevated border border-border-subtle rounded p-24">
+        <div class="flex items-center gap-12 mb-16">
+            <svg class="w-24 h-24 text-gw2-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <h2 class="text-lg font-bold text-text-main">Log Analysis</h2>
+        </div>
+        <p class="text-sm text-text-muted">
+            Upload EVTC/ZEVTC files or dps.report URLs. Automatic WvW detection with detailed per-player stats including DPS, boons, CC, healing, and role detection.
+        </p>
+    </div>
+
+    <div class="bg-surface-elevated border border-border-subtle rounded p-24">
+        <div class="flex items-center gap-12 mb-16">
+            <svg class="w-24 h-24 text-gw2-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            </svg>
+            <h2 class="text-lg font-bold text-text-main">Multi-Log Sessions</h2>
+        </div>
+        <p class="text-sm text-text-muted">
+            Aggregate stats across multiple fights. Track wins/losses, top performers, and session-wide metrics for your evening raids.
+        </p>
+    </div>
+
+    <div class="bg-surface-elevated border border-border-subtle rounded p-24">
+        <div class="flex items-center gap-12 mb-16">
+            <svg class="w-24 h-24 text-gw2-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            <h2 class="text-lg font-bold text-text-main">META by Context</h2>
+        </div>
+        <p class="text-sm text-text-muted">
+            View top specializations, winrates, and role distributions for Zerg, Guild Raid, and Roam contexts. Pure stats, no recommendations.
+        </p>
+    </div>
+</div>
+
+<div class="mt-64 bg-surface-elevated border border-border-subtle rounded p-32">
+    <h2 class="text-lg font-bold text-gw2-gold mb-16">What This Is</h2>
+    <ul class="space-y-8 text-sm text-text-muted">
+        <li class="flex items-start gap-8">
+            <svg class="w-16 h-16 mt-4 text-status-success flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>WvW-only combat analytics with automatic PvE/PvP rejection</span>
+        </li>
+        <li class="flex items-start gap-8">
+            <svg class="w-16 h-16 mt-4 text-status-success flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Detailed per-player metrics and role detection</span>
+        </li>
+        <li class="flex items-start gap-8">
+            <svg class="w-16 h-16 mt-4 text-status-success flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Context-aware META statistics (Zerg, Guild Raid, Roam)</span>
+        </li>
+    </ul>
+
+    <h2 class="text-lg font-bold text-gw2-red mt-32 mb-16">What This Is NOT</h2>
+    <ul class="space-y-8 text-sm text-text-muted">
+        <li class="flex items-start gap-8">
+            <svg class="w-16 h-16 mt-4 text-status-error flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            <span>No AI or machine learning recommendations</span>
+        </li>
+        <li class="flex items-start gap-8">
+            <svg class="w-16 h-16 mt-4 text-status-error flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            <span>No "what to play" or counterpicker features</span>
+        </li>
+        <li class="flex items-start gap-8">
+            <svg class="w-16 h-16 mt-4 text-status-error flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            <span>No PvE or PvP log analysis</span>
+        </li>
+    </ul>
+</div>
+{% endblock %}

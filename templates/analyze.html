@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Analyze - WvW Analytics{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-xl font-bold text-gw2-gold mb-32">Analyze Logs</h1>
+
+    {% if upload_success %}
+    <div class="bg-surface-elevated border border-status-success rounded p-16 mb-24">
+        <div class="flex items-center gap-12">
+            <svg class="w-24 h-24 text-status-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+                <p class="text-base font-bold text-text-main">{{ filename }}</p>
+                <p class="text-sm text-text-muted">{{ message }}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="bg-surface-elevated border border-border-subtle rounded p-32 mb-32">
+        <h2 class="text-lg font-bold text-text-main mb-24">Upload EVTC Log</h2>
+        
+        <form action="/analyze/upload" method="post" enctype="multipart/form-data" class="space-y-24">
+            <div>
+                <label for="file" class="block text-sm font-bold text-text-main mb-8">
+                    Select File
+                </label>
+                <input 
+                    type="file" 
+                    id="file" 
+                    name="file" 
+                    accept=".evtc,.zevtc"
+                    required
+                    class="block w-full text-sm text-text-muted
+                        file:mr-16 file:py-8 file:px-16
+                        file:rounded file:border-0
+                        file:text-sm file:font-bold
+                        file:bg-action-primary file:text-white
+                        hover:file:bg-action-primary-hover
+                        file:cursor-pointer
+                        border border-border-subtle rounded
+                        bg-surface-main
+                        cursor-pointer"
+                >
+                <p class="mt-8 text-xs text-text-muted">
+                    Supported formats: .evtc, .zevtc (max 100MB)
+                </p>
+            </div>
+
+            <div>
+                <button 
+                    type="submit"
+                    class="inline-flex items-center gap-8 px-24 py-12 bg-action-primary hover:bg-action-primary-hover text-white rounded transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-action-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    Upload & Analyze
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="bg-surface-elevated border border-border-subtle rounded p-32">
+        <h2 class="text-lg font-bold text-text-main mb-16">How It Works</h2>
+        <ol class="space-y-12 text-sm text-text-muted">
+            <li class="flex gap-12">
+                <span class="font-bold text-gw2-gold">1.</span>
+                <span>Upload your EVTC or ZEVTC file from ArcDPS</span>
+            </li>
+            <li class="flex gap-12">
+                <span class="font-bold text-gw2-gold">2.</span>
+                <span>File is validated and checked for WvW content (PvE/PvP logs are rejected)</span>
+            </li>
+            <li class="flex gap-12">
+                <span class="font-bold text-gw2-gold">3.</span>
+                <span>Combat events are parsed to extract all metrics</span>
+            </li>
+            <li class="flex gap-12">
+                <span class="font-bold text-gw2-gold">4.</span>
+                <span>View detailed per-player stats, boon uptimes, and role detection</span>
+            </li>
+            <li class="flex gap-12">
+                <span class="font-bold text-gw2-gold">5.</span>
+                <span>Data is stored for META aggregation by context</span>
+            </li>
+        </ol>
+    </div>
+</div>
+{% endblock %}

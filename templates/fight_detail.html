@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Fight #{{ fight_id }} - WvW Analytics{% endblock %}
+
+{% block content %}
+<div class="mb-32">
+    <a href="/analyze" class="inline-flex items-center gap-8 text-sm text-text-muted hover:text-text-main mb-16">
+        <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+        Back to Analyze
+    </a>
+    <h1 class="text-xl font-bold text-gw2-gold">Fight #{{ fight_id }}</h1>
+</div>
+
+<div class="bg-surface-elevated border border-border-subtle rounded p-32 text-center">
+    <svg class="w-48 h-48 mx-auto mb-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+    </svg>
+    <h2 class="text-lg font-bold text-text-main mb-8">Parser Not Yet Implemented</h2>
+    <p class="text-sm text-text-muted">
+        Fight detail view will be available after EVTC parser implementation
+    </p>
+</div>
+{% endblock %}

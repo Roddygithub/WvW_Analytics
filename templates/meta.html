@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}META: {{ context_name }} - WvW Analytics{% endblock %}
+
+{% block content %}
+<div class="mb-32">
+    <h1 class="text-xl font-bold text-gw2-gold mb-16">META Statistics: {{ context_name }}</h1>
+    <p class="text-base text-text-muted">
+        Aggregated statistics for {{ context_name }} context fights
+    </p>
+</div>
+
+<div class="flex gap-16 mb-32">
+    <a href="/meta/zerg" class="px-16 py-8 rounded transition-colors {% if context.value == 'zerg' %}bg-action-primary text-white{% else %}bg-surface-elevated border border-border-subtle text-text-main hover:bg-surface-main{% endif %}">
+        Zerg
+    </a>
+    <a href="/meta/guild_raid" class="px-16 py-8 rounded transition-colors {% if context.value == 'guild_raid' %}bg-action-primary text-white{% else %}bg-surface-elevated border border-border-subtle text-text-main hover:bg-surface-main{% endif %}">
+        Guild Raid
+    </a>
+    <a href="/meta/roam" class="px-16 py-8 rounded transition-colors {% if context.value == 'roam' %}bg-action-primary text-white{% else %}bg-surface-elevated border border-border-subtle text-text-main hover:bg-surface-main{% endif %}">
+        Roam
+    </a>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-16 mb-32">
+    <div class="bg-surface-elevated border border-border-subtle rounded p-16">
+        <div class="text-xs text-text-muted mb-8">Total Fights</div>
+        <div class="text-xl font-bold text-text-main font-tabular">0</div>
+    </div>
+    <div class="bg-surface-elevated border border-border-subtle rounded p-16">
+        <div class="text-xs text-text-muted mb-8">Wins</div>
+        <div class="text-xl font-bold text-status-success font-tabular">0</div>
+    </div>
+    <div class="bg-surface-elevated border border-border-subtle rounded p-16">
+        <div class="text-xs text-text-muted mb-8">Losses</div>
+        <div class="text-xl font-bold text-status-error font-tabular">0</div>
+    </div>
+    <div class="bg-surface-elevated border border-border-subtle rounded p-16">
+        <div class="text-xs text-text-muted mb-8">Unique Players</div>
+        <div class="text-xl font-bold text-text-main font-tabular">0</div>
+    </div>
+</div>
+
+<div class="bg-surface-elevated border border-border-subtle rounded p-32 text-center">
+    <svg class="w-48 h-48 mx-auto mb-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+    </svg>
+    <h2 class="text-lg font-bold text-text-main mb-8">No Data Yet</h2>
+    <p class="text-sm text-text-muted mb-24">
+        Upload some {{ context_name }} logs to see META statistics
+    </p>
+    <a href="/analyze" class="inline-flex items-center gap-8 px-24 py-12 bg-action-primary hover:bg-action-primary-hover text-white rounded transition-colors">
+        <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+        </svg>
+        Upload Logs
+    </a>
+</div>
+{% endblock %}

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}WvW Analytics{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'gw2-dark': '#0a0a0a',
+                        'gw2-darker': '#050505',
+                        'gw2-red': '#c1272d',
+                        'gw2-red-dark': '#8b1c1f',
+                        'gw2-gold': '#d4af37',
+                        'gw2-gold-dark': '#9d8128',
+                        'gw2-parchment': '#f4e8d0',
+                        'gw2-parchment-dark': '#d4c4a8',
+                        'surface-main': '#121212',
+                        'surface-elevated': '#1a1a1a',
+                        'text-main': '#e8e8e8',
+                        'text-muted': '#a0a0a0',
+                        'border-subtle': '#2a2a2a',
+                        'action-primary': '#c1272d',
+                        'action-primary-hover': '#8b1c1f',
+                        'status-success': '#4ade80',
+                        'status-warning': '#fbbf24',
+                        'status-error': '#ef4444',
+                    },
+                    spacing: {
+                        '4': '4px',
+                        '8': '8px',
+                        '12': '12px',
+                        '16': '16px',
+                        '24': '24px',
+                        '32': '32px',
+                        '48': '48px',
+                        '64': '64px',
+                        '80': '80px',
+                    },
+                    fontSize: {
+                        'xs': '12px',
+                        'sm': '14px',
+                        'base': '16px',
+                        'lg': '20px',
+                        'xl': '24px',
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #0a0a0a;
+            color: #e8e8e8;
+        }
+        .font-tabular {
+            font-variant-numeric: tabular-nums;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-screen bg-gw2-dark text-text-main">
+    <nav class="bg-surface-elevated border-b border-border-subtle sticky top-0 z-[100]">
+        <div class="max-w-7xl mx-auto px-16">
+            <div class="flex items-center justify-between h-64">
+                <div class="flex items-center gap-32">
+                    <a href="/" class="text-xl font-bold text-gw2-gold hover:text-gw2-gold-dark transition-colors">
+                        WvW Analytics
+                    </a>
+                    <div class="flex gap-24">
+                        <a href="/" class="px-16 py-8 rounded hover:bg-surface-main transition-colors {% if page == 'home' %}bg-surface-main text-gw2-gold{% else %}text-text-main{% endif %}">
+                            Home
+                        </a>
+                        <a href="/analyze" class="px-16 py-8 rounded hover:bg-surface-main transition-colors {% if page == 'analyze' %}bg-surface-main text-gw2-gold{% else %}text-text-main{% endif %}">
+                            Analyze
+                        </a>
+                        <div class="relative" x-data="{ open: false }">
+                            <button @click="open = !open" class="px-16 py-8 rounded hover:bg-surface-main transition-colors flex items-center gap-8 {% if page == 'meta' %}bg-surface-main text-gw2-gold{% else %}text-text-main{% endif %}">
+                                Meta
+                                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            <div x-show="open" @click.away="open = false" class="absolute top-full left-0 mt-8 bg-surface-elevated border border-border-subtle rounded shadow-lg min-w-[160px] z-[200]" style="display: none;">
+                                <a href="/meta/zerg" class="block px-16 py-8 hover:bg-surface-main transition-colors">Zerg</a>
+                                <a href="/meta/guild_raid" class="block px-16 py-8 hover:bg-surface-main transition-colors">Guild Raid</a>
+                                <a href="/meta/roam" class="block px-16 py-8 hover:bg-surface-main transition-colors">Roam</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-16 py-32">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-surface-elevated border-t border-border-subtle mt-64">
+        <div class="max-w-7xl mx-auto px-16 py-24 text-center text-text-muted text-sm">
+            <p>WvW Analytics - Pure combat analytics for Guild Wars 2</p>
+            <p class="mt-8">No AI, no recommendations, just data.</p>
+        </div>
+    </footer>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
