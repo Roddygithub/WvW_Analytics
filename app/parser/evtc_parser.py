@@ -1,6 +1,7 @@
 import struct
 import zlib
 import zipfile
+import logging
 from io import BytesIO
 from pathlib import Path
 from typing import Optional, BinaryIO
@@ -30,6 +31,22 @@ class IFF(IntEnum):
     FRIEND = 0
     FOE = 1
     UNKNOWN = 2
+
+
+class BoonID(IntEnum):
+    """Boon buff IDs from GW2."""
+    MIGHT = 740
+    FURY = 725
+    QUICKNESS = 1187
+    ALACRITY = 30328
+    PROTECTION = 717
+    AEGIS = 743
+    STABILITY = 1122
+    RESISTANCE = 26980
+    RESOLUTION = 873
+    REGENERATION = 718
+    VIGOR = 726
+    SWIFTNESS = 719
 
 
 class StateChange(IntEnum):
@@ -164,6 +181,17 @@ class PlayerStatsData:
     downs: int = 0
     kills: int = 0
     deaths: int = 0
+    
+    # Boon uptimes (in milliseconds of buff active time)
+    stability_uptime_ms: int = 0
+    quickness_uptime_ms: int = 0
+    aegis_uptime_ms: int = 0
+    protection_uptime_ms: int = 0
+    fury_uptime_ms: int = 0
+    resistance_uptime_ms: int = 0
+    alacrity_uptime_ms: int = 0
+    might_total_stacks: int = 0  # Sum of all might stacks over time
+    might_sample_count: int = 0  # Number of samples for averaging
 
 
 @dataclass
@@ -455,6 +483,16 @@ class EVTCParser:
         Returns:
             Dictionary mapping agent address to PlayerStatsData
         """
+        logger = logging.getLogger(__name__)
+        
+        total_events = len(self.events)
+        direct_damage_events = 0
+        ally_to_enemy_damage_events = 0
+        changedown_events = 0
+        changedead_events = 0
+        downed_results = 0
+        killingblow_results = 0
+        
         player_stats: dict[int, PlayerStatsData] = {}
         
         # Initialize stats for all player agents
@@ -474,22 +512,22 @@ class EVTCParser:
                     is_ally=is_ally
                 )
         
+        # Track active boons per player: {player_addr: {buff_id: [(start_time, duration), ...]}}
+        active_boons: dict[int, dict[int, list[tuple[int, int]]]] = {}
+        
         # Process all combat events
         for event in self.events:
             # Handle state changes first
             if event.is_statechange != StateChange.NONE:
                 if event.is_statechange == StateChange.CHANGEDEAD:
+                    changedead_events += 1
                     # Player death (allied player died)
                     if event.src_agent in player_stats:
                         stats = player_stats[event.src_agent]
                         if stats.is_ally:
                             stats.deaths += 1
                 elif event.is_statechange == StateChange.CHANGEDOWN:
-                    # Player downed - check if it's an enemy downed by an ally
-                    # src_agent is the one who got downed
-                    # We need to find who caused it from previous damage events
-                    # For now, we'll rely on CBTR_DOWNED result code in damage events
-                    pass
+                    changedown_events += 1
                 continue
             
             # Skip activation and buff remove events for damage calculation
@@ -498,6 +536,8 @@ class EVTCParser:
             
             # Direct damage events (buff == 0)
             if event.buff == 0 and event.value > 0:
+                direct_damage_events += 1
+                
                 # Damage dealt by player
                 if event.src_agent in player_stats:
                     player_stats[event.src_agent].total_damage += event.value
@@ -506,24 +546,100 @@ class EVTCParser:
                 if event.dst_agent in player_stats:
                     player_stats[event.dst_agent].damage_taken += event.value
                 
+                # Count allied -> enemy damage events (players only)
+                src_stats = player_stats.get(event.src_agent)
+                dst_stats = player_stats.get(event.dst_agent)
+                if src_stats and src_stats.is_ally and dst_stats and not dst_stats.is_ally:
+                    ally_to_enemy_damage_events += 1
+                
                 # Check for downs and kills (only count if target is enemy = IFF_FOE)
                 if event.result == CombatResult.DOWNED and event.iff == IFF.FOE:
+                    downed_results += 1
                     # Allied player downed an enemy
                     if event.src_agent in player_stats:
                         stats = player_stats[event.src_agent]
                         if stats.is_ally:
                             stats.downs += 1
                 elif event.result == CombatResult.KILLINGBLOW and event.iff == IFF.FOE:
+                    killingblow_results += 1
                     # Allied player killed an enemy
                     if event.src_agent in player_stats:
                         stats = player_stats[event.src_agent]
                         if stats.is_ally:
                             stats.kills += 1
             
+            # Buff apply events (buff != 0, buff_dmg == 0, value > 0)
+            elif event.buff != 0 and event.buff_dmg == 0 and event.value > 0:
+                # Buff applied to dst_agent
+                if event.dst_agent in player_stats:
+                    if event.dst_agent not in active_boons:
+                        active_boons[event.dst_agent] = {}
+                    if event.buff not in active_boons[event.dst_agent]:
+                        active_boons[event.dst_agent][event.buff] = []
+                    # Store (start_time, duration) for this buff application
+                    active_boons[event.dst_agent][event.buff].append((event.time, event.value))
+            
             # Condition damage events (buff != 0, buff_dmg > 0)
             elif event.buff != 0 and event.buff_dmg > 0:
                 # Condition damage dealt by player
                 if event.src_agent in player_stats:
                     player_stats[event.src_agent].total_damage += event.buff_dmg
+        
+        # Calculate boon uptimes from active_boons tracking
+        for player_addr, stats in player_stats.items():
+            if player_addr not in active_boons:
+                continue
+            
+            player_boons = active_boons[player_addr]
+            
+            # Stability
+            if BoonID.STABILITY in player_boons:
+                stats.stability_uptime_ms = sum(duration for _, duration in player_boons[BoonID.STABILITY])
+            
+            # Quickness
+            if BoonID.QUICKNESS in player_boons:
+                stats.quickness_uptime_ms = sum(duration for _, duration in player_boons[BoonID.QUICKNESS])
+            
+            # Aegis
+            if BoonID.AEGIS in player_boons:
+                stats.aegis_uptime_ms = sum(duration for _, duration in player_boons[BoonID.AEGIS])
+            
+            # Protection
+            if BoonID.PROTECTION in player_boons:
+                stats.protection_uptime_ms = sum(duration for _, duration in player_boons[BoonID.PROTECTION])
+            
+            # Fury
+            if BoonID.FURY in player_boons:
+                stats.fury_uptime_ms = sum(duration for _, duration in player_boons[BoonID.FURY])
+            
+            # Resistance
+            if BoonID.RESISTANCE in player_boons:
+                stats.resistance_uptime_ms = sum(duration for _, duration in player_boons[BoonID.RESISTANCE])
+            
+            # Alacrity
+            if BoonID.ALACRITY in player_boons:
+                stats.alacrity_uptime_ms = sum(duration for _, duration in player_boons[BoonID.ALACRITY])
+            
+            # Might - calculate average stacks
+            if BoonID.MIGHT in player_boons:
+                # Each application has a duration, we need to calculate average stacks over time
+                # Simplified: sum all durations and count applications
+                total_might_duration = sum(duration for _, duration in player_boons[BoonID.MIGHT])
+                might_applications = len(player_boons[BoonID.MIGHT])
+                if might_applications > 0:
+                    stats.might_total_stacks = total_might_duration
+                    stats.might_sample_count = might_applications
+        
+        logger.info(
+            "EVTC debug for %s: events=%d, direct=%d, ally_to_enemy=%d, changedown=%d, changedead=%d, res_downed=%d, res_killingblow=%d",
+            self.file_path.name,
+            total_events,
+            direct_damage_events,
+            ally_to_enemy_damage_events,
+            changedown_events,
+            changedead_events,
+            downed_results,
+            killingblow_results,
+        )
         
         return player_stats
