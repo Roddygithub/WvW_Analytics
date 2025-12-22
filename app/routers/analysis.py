@@ -63,7 +63,13 @@ async def upload_log(
         
     except Exception as e:
         logger.exception(f"Upload exception: {str(e)}")
-        recent_fights = logs_service.get_recent_fights(db, limit=10)
+        # Rollback the session if there was a transaction error
+        try:
+            db.rollback()
+            recent_fights = logs_service.get_recent_fights(db, limit=10)
+        except Exception:
+            recent_fights = []
+        
         return templates.TemplateResponse(
             "analyze.html",
             {
