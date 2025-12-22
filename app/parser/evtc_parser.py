@@ -588,14 +588,14 @@ class EVTCParser:
                     alacrity_events += 1
                 elif event.skillid == BoonID.MIGHT:
                     might_events += 1
-                    # Debug: log first 5 Might events for first allied player
-                    if might_events <= 5 and event.dst_agent in player_stats:
+                    # Debug: log first 20 Might events for one specific player
+                    if might_events <= 20 and event.dst_agent in player_stats:
                         stats = player_stats[event.dst_agent]
-                        if stats.is_ally and stats.character_name:
-                            logger.debug(
-                                "Might event #%d for %s: time=%d, value=%d, is_shields=%d, overstack=%d, is_offcycle=%d",
-                                might_events, stats.character_name, event.time, event.value, 
-                                event.is_shields, event.overstack_value, event.is_offcycle
+                        if stats.is_ally and "Sif" in stats.character_name:
+                            logger.info(
+                                "Might #%d for %s: time=%d, value=%d, buff_dmg=%d, overstack=%d, is_shields=%d, is_offcycle=%d, pad61=%d",
+                                might_events, stats.character_name, event.time, event.value, event.buff_dmg,
+                                event.overstack_value, event.is_shields, event.is_offcycle, event.pad61
                             )
                 elif event.skillid == BoonID.STABILITY:
                     stability_events += 1
