@@ -137,6 +137,30 @@
                             </svg>
                         </div>
                     </th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                        <div class="inline-flex items-center gap-8 justify-end">
+                            Quick %
+                            <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                        <div class="inline-flex items-center gap-8 justify-end">
+                            Alac %
+                            <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                        <div class="inline-flex items-center gap-8 justify-end">
+                            Might
+                            <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                            </svg>
+                        </div>
+                    </th>
                 </tr>
             </thead>
             <tbody>
@@ -157,6 +181,15 @@
                     </td>
                     <td class="px-16 py-12 text-right text-text-muted font-tabular">
                         {{ '{:,.0f}'.format(player.damage_taken) }}
+                    </td>
+                    <td class="px-16 py-12 text-right font-tabular {% if player.quickness_uptime >= 90 %}text-status-success{% elif player.quickness_uptime >= 50 %}text-status-warning{% else %}text-text-muted{% endif %}">
+                        {{ '{:.0f}'.format(player.quickness_uptime) }}%
+                    </td>
+                    <td class="px-16 py-12 text-right font-tabular {% if player.alacrity_uptime >= 90 %}text-status-success{% elif player.alacrity_uptime >= 50 %}text-status-warning{% else %}text-text-muted{% endif %}">
+                        {{ '{:.0f}'.format(player.alacrity_uptime) }}%
+                    </td>
+                    <td class="px-16 py-12 text-right font-tabular {% if player.might_uptime >= 20 %}text-status-success{% elif player.might_uptime >= 10 %}text-status-warning{% else %}text-text-muted{% endif %}">
+                        {{ '{:.1f}'.format(player.might_uptime) }}
                     </td>
                 </tr>
                 {% endfor %}
