@@ -1,0 +1,252 @@
+You are a senior full‑stack engineer and software architect.
+
+Context:
+I want to rebuild my current WvW analysis site from scratch, in a **new GitHub repo** named:
+
+    WvW Analytics
+
+I want:
+- a **professional**, clean, maintainable codebase,
+- **no AI / no recommendations engine** at all,
+- a focus on **WvW combat analytics only** (logs, meta, stats),
+- a frontend visually aligned with **Guild Wars 2’s aesthetic** (dark fantasy, red/black/gold, parchment tones), NOT a neon cyberpunk theme.
+
+You are working inside Windsurf, with access to a local git repo.
+
+---
+
+## Step 0 – Project initialization (important)
+
+Before coding, do this:
+
+1. Confirm the current working directory (e.g. run `pwd` and `ls`).
+2. Initialize a new git repo if needed:
+   - `git init`
+   - create a first commit with a minimal README.
+3. Create a main application folder, for example:
+   - `app/` (Python backend code)
+   - `frontend/` if you choose a separate frontend, OR `templates/ + static/` if you choose server-rendered HTML.
+4. Read all the files in the root directory and use them for the rest of the process.
+
+Show me exactly what you create in this step, then continue.
+
+---
+
+## Functional Scope (MVP)
+
+This new project must NOT include:
+- any recommendation system,
+- any LLM/AI integration,
+- any “counterpicker” or “what to play” logic.
+
+MVP features:
+
+1. **Log Analysis (single & multi)**  
+   - Upload `.evtc` / `.zevtc` and dps.report URLs.
+   - WvW-only filter: reject PvE/PvP logs.
+   - Parse logs (either via dps.report JSON or local parser).
+     - extracting the metrics from a .evtc or .zevtc file
+     - translating the metrics using the different IDs with README.txt and writeencounter.cpp
+     - storing the metrics and data for analysis
+   - For each fight (single log view):
+     - Full granular stats per player (like my current site):
+       - DPS, damage, downs, deaths
+       - Boon uptimes (stab, quickness, aegis, etc.)
+       - CC / strips / cleanses
+       - Outgoing healing / outgoing barrier
+       - Detected roles (DPS / Heal / Support / Boon / Strip)
+     - Fight summary:
+       - duration,
+       - ally/enemy counts,
+       - result: victory/defeat/draw.
+
+   - For multiple logs (session view):
+     - number of fights,
+     - wins / losses / draws,
+     - total duration,
+     - unique players,
+     - simple top lists (e.g., top performers by DPS/kills).
+     - the total of the different metrics in the single file report
+       - DPS, damage, down contribution
+       - Boon uptimes and boon generation (stab, quickness, aegis, etc.)
+       - CC / Strips (in and out)
+       - Outgoing healing, outgoing barrier and cleanses
+
+2. **META by Context (no recommendations, just stats)**  
+   - Automatically classify fights by context:
+     - Zerg
+     - Guild Raid
+     - Roam
+   - META pages:
+     - `/meta/zerg`
+     - `/meta/guild_raid`
+     - `/meta/roaming`
+   - For each context:
+     - fights count,
+     - top specializations (usage),
+     - basic winrate per spec,
+     - distribution by role (stab/heal/boons/dps/strip), perhaps, to be more precise for roaming section with mix of roles.
+
+Nothing else is mandatory for v1.
+
+Later feature flags (to keep in mind, but not implement now):
+- Account linking via GW2 API,
+- Player career dashboard,
+- Guild analytics,
+- Performance percentiles,
+
+For now, v1 is **pure analytics**.
+
+---
+
+## Technical Stack Requirements
+
+You must choose a modern, widely used, maintainable stack. My preferences:
+
+- **Backend:**
+  - Language: **Python 3.11+**
+  - Framework: **FastAPI**
+  - DB: start with **SQLite** for local/dev, but design so that switching to PostgreSQL later is easy (use SQLAlchemy/SQLModel).
+  - Testing: **pytest**
+  - Linting/formatting: **ruff** + **black** (or equivalent)
+  - Type hints everywhere (Python 3.11 style, `mypy`-friendly).
+
+- **Frontend:**
+  Two acceptable options; you choose and justify:
+
+  Option A – Server-rendered (simpler, single repo):
+  - Jinja2 templates with FastAPI
+  - Tailwind CSS
+  - HTMX + Alpine.js for interactivity
+
+  Option B – Separate SPA (if you really think it’s worth it):
+  - Front: React or Vue with TypeScript (Next.js or Vite)
+  - Backend: FastAPI purely as JSON API
+  - Only choose this if you can keep it simple and well-structured; otherwise, prefer Option A.
+
+Given that this is a **solo-maintained analytics app**, prefer **Option A (server-rendered)** unless there is a very strong reason to go SPA.
+
+---
+
+## UI/UX & Design Requirements   
+
+- Visual theme must evoke **Guild Wars 2**, not cyberpunk:
+  - Color palette: deep reds, dark greys/blacks, gold accents, parchment-style backgrounds.
+  - Typography: clean, readable; no “sci-fi neon” feeling.
+- Layout:
+  - Responsive (desktop first, then tablet/mobile).
+  - Simple, modern layout:
+    - Top navigation bar with:
+      - Home
+      - Analyze
+      - Meta (with sub-tabs for Zerg/Guild Raid/Roam)
+    - Clear, structured sections.
+- For now, keep the UI structure simple but professional:
+  - Avoid over-the-top gradients, glows, and animated backgrounds.
+  - Focus on readability of tables and stats.
+
+If helpful, create a `design.md` file describing:
+- color tokens (primary, background, accents),
+- typography choices,
+- spacing scale.
+
+---
+
+## Architecture Requirements (very important)
+
+Structure the backend cleanly, for maintainability:
+
+- `app/main.py`:
+  - creates FastAPI app,
+  - includes routers,
+  - sets up templates, static files, logging, middleware.
+
+- `app/routers/`:
+  - `home.py` → `/`
+  - `analysis.py` → `/analyze`, file uploads
+  - `meta.py` → `/meta/zerg`, `/meta/guild_raid`, `/meta/roam`
+  - More routers later as needed.
+
+- `app/services/`:
+  - `logs_service.py` → parsing, WvW filtering, fight extraction
+  - `meta_service.py` → aggregate stats by spec/role/context
+  - Possibly `context_service.py` for context detection (zerg/guild_raid/roam)
+
+- `app/models/`:
+  - Pydantic models for API responses and internal representations (Fight, PlayerStats, MetaStats, etc.).
+
+- `app/db/`:
+  - `base.py` → session, engine
+  - `models.py` → SQLAlchemy/SQLModel definitions for fights, players, etc.
+
+- `templates/`:
+  - `base.html`
+  - `index.html`
+  - `analyze.html`
+  - `meta.html` (or separate meta templates)
+
+- `static/`:
+  - `css/`
+  - `js/`
+  - `img/` (GW2-inspired imagery if needed)
+
+Also:
+
+- Add a `pyproject.toml` or `requirements.txt` with exact deps.
+- Add at least:
+  - `tests/test_analysis.py` for core log analysis logic,
+  - `tests/test_meta.py` for meta aggregation.
+
+---
+
+## Implementation Strategy
+
+Please proceed step by step:
+
+1. **Propose the stack & high-level architecture** (a short bullet list), confirm:
+   - backend stack,
+   - frontend approach (server-rendered vs SPA),
+   - DB approach (SQLite now, PostgreSQL-ready).
+
+2. Scaffold the project structure:
+   - `app/` with `main.py`, `routers/`, `services/`, `models/`, `db/`
+   - `templates/`, `static/`
+   - basic routes:
+     - `/` (home, simple page)
+     - `/analyze` (empty form for now)
+     - `/meta/zerg` (placeholder page)
+   - minimal Tailwind setup with a GW2-like palette.
+
+3. Implement log upload + placeholder analysis:
+   - add upload form to `/analyze`,
+   - accept `.evtc/.zevtc`,
+   - store file temporarily,
+   - show a “parsed” placeholder result.
+
+4. Implement WvW filter & simple extraction:
+   - integrate a placeholder parser or a simple adapter to existing JSON (you can stub it for now),
+   - detect WvW vs non-WvW (PvE/PvP) and reject non-WvW.
+
+5. Implement basic META aggregation by context:
+   - store fights in DB,
+   - simple `/meta/<context>` that shows:
+     - fights count,
+     - top 10 specs by usage.
+
+6. Add 1–2 minimal pytest tests to validate:
+   - `/` returns 200,
+   - `/analyze` returns 200,
+   - `/meta/zerg` returns 200.
+
+At each step:
+- show me file-by-file diffs,
+- keep commits small and focused,
+- ensure the app can run with:
+
+  ```bash
+  uvicorn app.main:app --reload
+Key constraints to always respect:
+
+No AI/LLM, no recommendation engine.
+Focus on analytics & clean architecture.
+UI must evoke Guild Wars 2, not cyberpunk.
