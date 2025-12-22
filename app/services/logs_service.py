@@ -182,6 +182,11 @@ async def process_log_file(
                 resistance_uptime=resistance_uptime,
                 alacrity_uptime=alacrity_uptime,
                 might_uptime=might_avg,
+                strips_out=stats.strips,
+                cleanses=stats.cleanses,
+                cc_total=stats.cc_total,
+                healing_out=stats.healing_out,
+                barrier_out=stats.barrier_out,
             )
             db.add(player_stat)
         
