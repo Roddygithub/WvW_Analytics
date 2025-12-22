@@ -123,6 +123,14 @@ async def process_log_file(
         # Extract and save player stats
         player_stats_data = parser.extract_player_stats()
         
+        # Count allies and enemies
+        ally_count = sum(1 for stats in player_stats_data.values() if stats.is_ally)
+        enemy_count = sum(1 for stats in player_stats_data.values() if not stats.is_ally)
+        
+        # Update fight counts
+        fight.ally_count = ally_count
+        fight.enemy_count = enemy_count
+        
         for addr, stats in player_stats_data.items():
             # Calculate DPS
             dps = 0.0
