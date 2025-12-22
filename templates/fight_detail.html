@@ -136,7 +136,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for player in fight.player_stats | sort(attribute='dps', reverse=True) %}
+                {% for player in fight.player_stats | selectattr('account_name') | sort(attribute='dps', reverse=True) %}
                 <tr class="border-b border-border-subtle hover:bg-surface-base transition-colors">
                     <td class="px-16 py-12 text-text-main">{{ player.character_name }}</td>
                     <td class="px-16 py-12 text-text-muted text-xs">{{ player.account_name }}</td>

@@ -157,6 +157,7 @@ class PlayerStatsData:
     profession: int = 0
     elite_spec: int = 0
     subgroup: int = 0
+    is_ally: bool = False  # True if player is in our squad (has account_name)
     
     total_damage: int = 0
     damage_taken: int = 0
@@ -460,13 +461,17 @@ class EVTCParser:
         for agent in self.agents:
             if agent.is_player:
                 char_name, acc_name, subgroup = agent.parse_player_name()
+                # Allied players have account_name starting with ':'
+                is_ally = acc_name.startswith(':') if acc_name else False
+                
                 player_stats[agent.addr] = PlayerStatsData(
                     addr=agent.addr,
                     character_name=char_name,
                     account_name=acc_name,
                     profession=agent.prof,
                     elite_spec=agent.is_elite,
-                    subgroup=subgroup
+                    subgroup=subgroup,
+                    is_ally=is_ally
                 )
         
         # Process all combat events
