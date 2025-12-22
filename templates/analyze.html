@@ -72,7 +72,8 @@
                 <thead>
                     <tr class="border-b border-border-subtle">
                         <th class="text-left text-sm font-bold text-text-muted pb-12 px-16">File</th>
-                        <th class="text-left text-sm font-bold text-text-muted pb-12 px-16">Uploaded</th>
+                        <th class="text-right text-sm font-bold text-text-muted pb-12 px-16">Duration</th>
+                        <th class="text-right text-sm font-bold text-text-muted pb-12 px-16">Players</th>
                         <th class="text-left text-sm font-bold text-text-muted pb-12 px-16">Context</th>
                         <th class="text-left text-sm font-bold text-text-muted pb-12 px-16">Result</th>
                         <th class="text-right text-sm font-bold text-text-muted pb-12 px-16">Actions</th>
@@ -82,8 +83,17 @@
                     {% for fight in recent_fights %}
                     <tr class="border-b border-border-subtle hover:bg-surface-main transition-colors">
                         <td class="py-12 px-16 text-sm text-text-main">{{ fight.evtc_filename }}</td>
-                        <td class="py-12 px-16 text-sm text-text-muted font-tabular">
-                            {{ fight.upload_timestamp.strftime('%Y-%m-%d %H:%M') }}
+                        <td class="py-12 px-16 text-sm text-text-muted font-tabular text-right">
+                            {% if fight.duration_ms %}
+                                {% set minutes = (fight.duration_ms // 60000) %}
+                                {% set seconds = ((fight.duration_ms % 60000) // 1000) %}
+                                {{ minutes }}:{{ '%02d' % seconds }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="py-12 px-16 text-sm text-text-muted font-tabular text-right">
+                            {{ fight.ally_count }}
                         </td>
                         <td class="py-12 px-16 text-sm text-text-muted">
                             <span class="px-8 py-4 bg-surface-main rounded text-xs">

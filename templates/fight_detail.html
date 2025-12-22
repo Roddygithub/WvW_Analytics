@@ -14,7 +14,19 @@
     <p class="text-sm text-text-muted">{{ fight.evtc_filename }}</p>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-4 gap-16 mb-32">
+<div class="grid grid-cols-2 md:grid-cols-5 gap-16 mb-32">
+    <div class="bg-surface-elevated border border-border-subtle rounded p-16">
+        <div class="text-xs text-text-muted mb-8">Duration</div>
+        <div class="text-base font-bold text-text-main font-tabular">
+            {% if fight.duration_ms %}
+                {% set minutes = (fight.duration_ms // 60000) %}
+                {% set seconds = ((fight.duration_ms % 60000) // 1000) %}
+                {{ minutes }}:{{ '%02d' % seconds }}
+            {% else %}
+                Unknown
+            {% endif %}
+        </div>
+    </div>
     <div class="bg-surface-elevated border border-border-subtle rounded p-16">
         <div class="text-xs text-text-muted mb-8">Context</div>
         <div class="text-base font-bold text-text-main">
@@ -36,12 +48,14 @@
         </div>
     </div>
     <div class="bg-surface-elevated border border-border-subtle rounded p-16">
-        <div class="text-xs text-text-muted mb-8">Allies</div>
+        <div class="text-xs text-text-muted mb-8">Players</div>
         <div class="text-base font-bold text-text-main font-tabular">{{ fight.ally_count }}</div>
     </div>
     <div class="bg-surface-elevated border border-border-subtle rounded p-16">
-        <div class="text-xs text-text-muted mb-8">Enemies</div>
-        <div class="text-base font-bold text-text-main font-tabular">{{ fight.enemy_count }}</div>
+        <div class="text-xs text-text-muted mb-8">Map ID</div>
+        <div class="text-base font-bold text-text-main font-tabular">
+            {{ fight.map_id if fight.map_id else 'Unknown' }}
+        </div>
     </div>
 </div>
 

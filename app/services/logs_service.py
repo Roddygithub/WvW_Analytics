@@ -50,12 +50,26 @@ def validate_evtc_file(file_path: Path) -> tuple[bool, Optional[str]]:
 
 def is_wvw_log(file_path: Path) -> tuple[bool, Optional[str]]:
     """
-    Check if log is WvW (placeholder - will use parser in Step 4).
+    Check if log is WvW using EVTC parser.
     
     Returns:
         (is_wvw, error_message)
     """
-    return True, None
+    from app.parser.evtc_parser import EVTCParser, EVTCParseError
+    
+    try:
+        parser = EVTCParser(file_path)
+        parser.parse()
+        
+        if not parser.is_wvw_log():
+            return False, "Not a WvW log (npcid != 1). PvE/PvP logs are not supported."
+        
+        return True, None
+        
+    except EVTCParseError as e:
+        return False, f"EVTC parse error: {str(e)}"
+    except Exception as e:
+        return False, f"Failed to parse EVTC file: {str(e)}"
 
 
 async def process_log_file(
@@ -63,31 +77,55 @@ async def process_log_file(
     db: Session
 ) -> tuple[Optional[Fight], Optional[str]]:
     """
-    Process uploaded log file (placeholder).
+    Process uploaded log file and extract basic metrics.
     
     Returns:
         (fight_record, error_message)
     """
+    from app.parser.evtc_parser import EVTCParser, EVTCParseError
+    
     is_valid, error = validate_evtc_file(file_path)
     if not is_valid:
         return None, error
     
-    is_wvw, error = is_wvw_log(file_path)
-    if not is_wvw:
-        return None, error or "Not a WvW log (PvE/PvP logs are not supported)"
-    
-    fight = Fight(
-        evtc_filename=file_path.name,
-        upload_timestamp=datetime.utcnow(),
-        context=FightContext.UNKNOWN,
-        result=FightResult.UNKNOWN,
-    )
-    
-    db.add(fight)
-    db.commit()
-    db.refresh(fight)
-    
-    return fight, None
+    try:
+        parser = EVTCParser(file_path)
+        parser.parse()
+        
+        if not parser.is_wvw_log():
+            return None, "Not a WvW log (npcid != 1). PvE/PvP logs are not supported."
+        
+        start_time = parser.get_combat_start_time()
+        end_time = parser.get_combat_end_time()
+        duration_ms = None
+        if start_time is not None and end_time is not None:
+            duration_ms = end_time - start_time
+        
+        map_id = parser.get_map_id()
+        
+        player_count = sum(1 for agent in parser.agents if agent.is_player)
+        
+        fight = Fight(
+            evtc_filename=file_path.name,
+            upload_timestamp=datetime.utcnow(),
+            duration_ms=duration_ms,
+            context=FightContext.UNKNOWN,
+            result=FightResult.UNKNOWN,
+            ally_count=player_count,
+            enemy_count=0,
+            map_id=map_id,
+        )
+        
+        db.add(fight)
+        db.commit()
+        db.refresh(fight)
+        
+        return fight, None
+        
+    except EVTCParseError as e:
+        return None, f"EVTC parse error: {str(e)}"
+    except Exception as e:
+        return None, f"Failed to process log file: {str(e)}"
 
 
 def get_fight_by_id(db: Session, fight_id: int) -> Optional[Fight]:
