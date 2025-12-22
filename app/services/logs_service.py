@@ -137,6 +137,29 @@ async def process_log_file(
             if duration_ms and duration_ms > 0:
                 dps = (stats.total_damage / duration_ms) * 1000  # Convert to per-second
             
+            # Calculate boon uptimes as percentages
+            stability_uptime = 0.0
+            quickness_uptime = 0.0
+            aegis_uptime = 0.0
+            protection_uptime = 0.0
+            fury_uptime = 0.0
+            resistance_uptime = 0.0
+            alacrity_uptime = 0.0
+            might_avg = 0.0
+            
+            if duration_ms and duration_ms > 0:
+                stability_uptime = min(100.0, (stats.stability_uptime_ms / duration_ms) * 100)
+                quickness_uptime = min(100.0, (stats.quickness_uptime_ms / duration_ms) * 100)
+                aegis_uptime = min(100.0, (stats.aegis_uptime_ms / duration_ms) * 100)
+                protection_uptime = min(100.0, (stats.protection_uptime_ms / duration_ms) * 100)
+                fury_uptime = min(100.0, (stats.fury_uptime_ms / duration_ms) * 100)
+                resistance_uptime = min(100.0, (stats.resistance_uptime_ms / duration_ms) * 100)
+                alacrity_uptime = min(100.0, (stats.alacrity_uptime_ms / duration_ms) * 100)
+                
+                # Might: average stacks (simplified calculation)
+                if stats.might_sample_count > 0:
+                    might_avg = stats.might_total_stacks / (duration_ms * stats.might_sample_count / 1000)
+            
             player_stat = PlayerStats(
                 fight_id=fight.id,
                 character_name=stats.character_name,
@@ -150,6 +173,14 @@ async def process_log_file(
                 kills=stats.kills,
                 deaths=stats.deaths,
                 damage_taken=stats.damage_taken,
+                stability_uptime=stability_uptime,
+                quickness_uptime=quickness_uptime,
+                aegis_uptime=aegis_uptime,
+                protection_uptime=protection_uptime,
+                fury_uptime=fury_uptime,
+                resistance_uptime=resistance_uptime,
+                alacrity_uptime=alacrity_uptime,
+                might_uptime=might_avg,
             )
             db.add(player_stat)
         
