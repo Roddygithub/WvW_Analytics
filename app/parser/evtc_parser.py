@@ -479,9 +479,17 @@ class EVTCParser:
             # Handle state changes first
             if event.is_statechange != StateChange.NONE:
                 if event.is_statechange == StateChange.CHANGEDEAD:
-                    # Player death
+                    # Player death (allied player died)
                     if event.src_agent in player_stats:
-                        player_stats[event.src_agent].deaths += 1
+                        stats = player_stats[event.src_agent]
+                        if stats.is_ally:
+                            stats.deaths += 1
+                elif event.is_statechange == StateChange.CHANGEDOWN:
+                    # Player downed - check if it's an enemy downed by an ally
+                    # src_agent is the one who got downed
+                    # We need to find who caused it from previous damage events
+                    # For now, we'll rely on CBTR_DOWNED result code in damage events
+                    pass
                 continue
             
             # Skip activation and buff remove events for damage calculation
@@ -498,13 +506,19 @@ class EVTCParser:
                 if event.dst_agent in player_stats:
                     player_stats[event.dst_agent].damage_taken += event.value
                 
-                # Check for downs and kills
-                if event.result == CombatResult.DOWNED:
+                # Check for downs and kills (only count if target is enemy = IFF_FOE)
+                if event.result == CombatResult.DOWNED and event.iff == IFF.FOE:
+                    # Allied player downed an enemy
                     if event.src_agent in player_stats:
-                        player_stats[event.src_agent].downs += 1
-                elif event.result == CombatResult.KILLINGBLOW:
+                        stats = player_stats[event.src_agent]
+                        if stats.is_ally:
+                            stats.downs += 1
+                elif event.result == CombatResult.KILLINGBLOW and event.iff == IFF.FOE:
+                    # Allied player killed an enemy
                     if event.src_agent in player_stats:
-                        player_stats[event.src_agent].kills += 1
+                        stats = player_stats[event.src_agent]
+                        if stats.is_ally:
+                            stats.kills += 1
             
             # Condition damage events (buff != 0, buff_dmg > 0)
             elif event.buff != 0 and event.buff_dmg > 0:
