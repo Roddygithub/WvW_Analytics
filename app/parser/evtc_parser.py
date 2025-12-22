@@ -49,6 +49,35 @@ class BoonID(IntEnum):
     SWIFTNESS = 719
 
 
+# Skill ID sets for boons and conditions (subset based on EVTC spec)
+# These are used for strip/cleanse classification.
+BOON_SKILL_IDS: set[int] = {
+    int(BoonID.MIGHT),
+    int(BoonID.FURY),
+    int(BoonID.QUICKNESS),
+    int(BoonID.ALACRITY),
+    int(BoonID.PROTECTION),
+    int(BoonID.AEGIS),
+    int(BoonID.STABILITY),
+    int(BoonID.RESISTANCE),
+    int(BoonID.RESOLUTION),
+    int(BoonID.REGENERATION),
+    int(BoonID.VIGOR),
+    int(BoonID.SWIFTNESS),
+}
+
+# Common damaging/negative conditions from EVTC spec
+CONDITION_SKILL_IDS: set[int] = {
+    723,    # Poison
+    736,    # Bleeding
+    737,    # Burning (implied by ordering in spec)
+    738,    # Vulnerability
+    742,    # Weakness
+    861,    # Confusion
+    19426,  # Torment
+}
+
+
 class StateChange(IntEnum):
     """Combat state change types from EVTC spec (cbtstatechange)."""
     NONE = 0  # CBTS_NONE
@@ -536,33 +565,32 @@ class EVTCParser:
                     is_ally=is_ally
                 )
         
-        # Track active boons per player: {player_addr: {buff_id: [(start_time, duration), ...]}}
+        # Track active boons per player: {player_addr: {buff_id: [(start_time, duration, stack_info), ...]}}
         active_boons: dict[int, dict[int, list[tuple[int, int]]]] = {}
         
         # Process all combat events
         for event in self.events:
             # Handle buff remove events (strips/cleanses)
             if event.is_buffremove != BuffRemove.NONE and event.is_buffremove != BuffRemove.MANUAL:
-                # Skip manual removes for strip/cleanse calculation
-                if event.dst_agent in player_stats and event.src_agent in player_stats:
-                    src_stats = player_stats[event.src_agent]
-                    dst_stats = player_stats[event.dst_agent]
-                    
-                    if src_stats.is_ally:
-                        # Check if it's a strip (removing from enemy) or cleanse (removing from ally)
-                        if not dst_stats.is_ally:
-                            # Strip: ally removing buff from enemy
-                            if event.is_buffremove == BuffRemove.ALL:
-                                src_stats.strips += event.result if event.result > 0 else 1
-                            else:  # SINGLE
-                                src_stats.strips += 1
-                        else:
-                            # Cleanse: ally removing condition from ally
-                            # TODO: Need to identify if buff is a condition (negative effect)
-                            if event.is_buffremove == BuffRemove.ALL:
-                                src_stats.cleanses += event.result if event.result > 0 else 1
-                            else:  # SINGLE
-                                src_stats.cleanses += 1
+                # For buff remove events, EVTC uses:
+                #   src_agent: agent that had the buff removed (target)
+                #   dst_agent: agent that removed it (source/remover)
+                if event.src_agent in player_stats and event.dst_agent in player_stats:
+                    target_stats = player_stats[event.src_agent]
+                    remover_stats = player_stats[event.dst_agent]
+
+                    if remover_stats.is_ally:
+                        stacks_removed = event.result if event.result > 0 else 1
+
+                        # Strips: allied player removes a boon from an enemy player
+                        if (event.skillid in BOON_SKILL_IDS) and (not target_stats.is_ally):
+                            remover_stats.strips += stacks_removed
+
+                        # Cleanses: allied player removes a condition from an allied player
+                        elif (event.skillid in CONDITION_SKILL_IDS) and target_stats.is_ally:
+                            remover_stats.cleanses += stacks_removed
+
+                # Skip further processing of this event for damage/boons
                 continue
             
             # Handle state changes
