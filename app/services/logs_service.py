@@ -156,9 +156,10 @@ async def process_log_file(
                 resistance_uptime = min(100.0, (stats.resistance_uptime_ms / duration_ms) * 100)
                 alacrity_uptime = min(100.0, (stats.alacrity_uptime_ms / duration_ms) * 100)
                 
-                # Might: average stacks (simplified calculation)
-                if stats.might_sample_count > 0:
-                    might_avg = stats.might_total_stacks / (duration_ms * stats.might_sample_count / 1000)
+                # Might: average stacks (time-weighted)
+                if stats.might_sample_count > 0 and duration_ms > 0:
+                    # might_total_stacks is already stack*time in ms, divide by duration
+                    might_avg = min(25.0, stats.might_total_stacks / duration_ms)
             
             player_stat = PlayerStats(
                 fight_id=fight.id,

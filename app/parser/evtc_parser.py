@@ -650,15 +650,32 @@ class EVTCParser:
             if BoonID.ALACRITY in player_boons:
                 stats.alacrity_uptime_ms = sum(duration for _, duration in player_boons[BoonID.ALACRITY])
             
-            # Might - calculate average stacks
+            # Might - calculate average stacks using proper time-weighted algorithm
             if BoonID.MIGHT in player_boons:
-                # Each application has a duration, we need to calculate average stacks over time
-                # Simplified: sum all durations and count applications
-                total_might_duration = sum(duration for _, duration in player_boons[BoonID.MIGHT])
-                might_applications = len(player_boons[BoonID.MIGHT])
-                if might_applications > 0:
-                    stats.might_total_stacks = total_might_duration
-                    stats.might_sample_count = might_applications
+                # Sort events by time
+                might_events = sorted(player_boons[BoonID.MIGHT], key=lambda x: x[0])
+                
+                total_stack_time = 0.0
+                current_stacks = 0
+                last_time = might_events[0][0] if might_events else 0
+                
+                for event_time, duration, stack_count in might_events:
+                    # Accumulate time with previous stack count
+                    if event_time > last_time:
+                        total_stack_time += current_stacks * (event_time - last_time)
+                    
+                    # Update current stacks (is_shields field contains active stack count)
+                    current_stacks = stack_count
+                    last_time = event_time
+                
+                # Add tail segment from last event to fight end
+                fight_end = self.get_combat_end_time()
+                if fight_end and last_time < fight_end:
+                    total_stack_time += current_stacks * (fight_end - last_time)
+                
+                # Calculate average and store (will be converted to proper average in service)
+                stats.might_total_stacks = int(total_stack_time)
+                stats.might_sample_count = 1  # Use 1 to indicate we have data
         
         logger.info(
             "EVTC debug for %s: events=%d, direct=%d, ally_to_enemy=%d, changedown=%d, changedead=%d, res_downed=%d, res_killingblow=%d",
