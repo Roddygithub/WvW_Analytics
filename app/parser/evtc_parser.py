@@ -588,10 +588,10 @@ class EVTCParser:
                     alacrity_events += 1
                 elif event.skillid == BoonID.MIGHT:
                     might_events += 1
-                    # Debug: log first 20 Might events for one specific player
+                    # Debug: log first 20 Might events for first allied player we find
                     if might_events <= 20 and event.dst_agent in player_stats:
                         stats = player_stats[event.dst_agent]
-                        if stats.is_ally and "Sif" in stats.character_name:
+                        if stats.is_ally and stats.character_name:
                             logger.info(
                                 "Might #%d for %s: time=%d, value=%d, buff_dmg=%d, overstack=%d, is_shields=%d, is_offcycle=%d, pad61=%d",
                                 might_events, stats.character_name, event.time, event.value, event.buff_dmg,
@@ -650,30 +650,37 @@ class EVTCParser:
             if BoonID.ALACRITY in player_boons:
                 stats.alacrity_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.ALACRITY])
             
-            # Might - calculate average stacks using proper time-weighted algorithm
+            # Might - calculate average stacks by tracking active buff instances
             if BoonID.MIGHT in player_boons:
-                # Sort events by time
-                might_events = sorted(player_boons[BoonID.MIGHT], key=lambda x: x[0])
+                # For stacking buffs, each application is a separate instance
+                # We need to track when instances start and end to count concurrent stacks
+                might_events = player_boons[BoonID.MIGHT]
                 
+                # Create timeline of stack changes: (time, stack_delta)
+                timeline = []
+                for event_time, duration, _ in might_events:
+                    timeline.append((event_time, +1))  # Stack added
+                    timeline.append((event_time + duration, -1))  # Stack removed
+                
+                # Sort by time
+                timeline.sort()
+                
+                # Calculate time-weighted average
                 total_stack_time = 0.0
                 current_stacks = 0
-                last_time = might_events[0][0] if might_events else 0
+                last_time = timeline[0][0] if timeline else 0
                 
-                for event_time, duration, stack_count in might_events:
-                    # Accumulate time with previous stack count
+                for event_time, stack_delta in timeline:
+                    # Accumulate time with current stack count
                     if event_time > last_time:
                         total_stack_time += current_stacks * (event_time - last_time)
                     
-                    # Update current stacks (is_shields field contains active stack count)
-                    current_stacks = stack_count
+                    # Update stack count
+                    current_stacks += stack_delta
+                    current_stacks = max(0, min(25, current_stacks))  # Cap at 0-25
                     last_time = event_time
                 
-                # Add tail segment from last event to fight end
-                fight_end = self.get_combat_end_time()
-                if fight_end and last_time < fight_end:
-                    total_stack_time += current_stacks * (fight_end - last_time)
-                
-                # Calculate average and store (will be converted to proper average in service)
+                # Store for service layer calculation
                 stats.might_total_stacks = int(total_stack_time)
                 stats.might_sample_count = 1  # Use 1 to indicate we have data
         
