@@ -140,6 +140,64 @@ class BuffRemove(IntEnum):
     UNKNOWN = 4  # CBTB_UNKNOWN
 
 
+# Profession ID to name mapping (from GW2 API)
+PROFESSION_NAMES = {
+    1: "Guardian",
+    2: "Warrior",
+    3: "Engineer",
+    4: "Ranger",
+    5: "Thief",
+    6: "Elementalist",
+    7: "Mesmer",
+    8: "Necromancer",
+    9: "Revenant",
+}
+
+# Elite spec ID to name mapping (from GW2 API)
+ELITE_SPEC_NAMES = {
+    5: "Druid",
+    7: "Daredevil",
+    18: "Berserker",
+    27: "Dragonhunter",
+    34: "Reaper",
+    40: "Chronomancer",
+    43: "Scrapper",
+    48: "Tempest",
+    52: "Herald",
+    55: "Soulbeast",
+    56: "Weaver",
+    57: "Holosmith",
+    58: "Deadeye",
+    59: "Mirage",
+    60: "Scourge",
+    61: "Spellbreaker",
+    62: "Firebrand",
+    63: "Renegade",
+    64: "Harbinger",
+    65: "Willbender",
+    66: "Virtuoso",
+    67: "Catalyst",
+    68: "Bladesworn",
+    69: "Vindicator",
+    70: "Mechanist",
+    71: "Specter",
+    72: "Untamed",
+}
+
+
+def get_spec_name(profession_id: int, elite_spec_id: int) -> str:
+    """Get human-readable spec name from profession and elite spec IDs."""
+    prof_name = PROFESSION_NAMES.get(profession_id, "Unknown")
+    
+    # If no elite spec or elite spec is 0, return just profession
+    if elite_spec_id == 0 or elite_spec_id not in ELITE_SPEC_NAMES:
+        return prof_name
+    
+    # Return "Profession (Elite Spec)"
+    elite_name = ELITE_SPEC_NAMES.get(elite_spec_id, "Unknown")
+    return f"{prof_name} ({elite_name})"
+
+
 @dataclass
 class EVTCHeader:
     """EVTC file header."""
@@ -211,6 +269,9 @@ class PlayerStatsData:
     account_name: str = ""
     profession: int = 0
     elite_spec: int = 0
+    profession_name: str = ""
+    elite_spec_name: str = ""
+    spec_name: str = ""  # e.g. "Guardian (Firebrand)"
     subgroup: int = 0
     is_ally: bool = False  # True if player is in our squad (has account_name)
     
@@ -555,12 +616,20 @@ class EVTCParser:
                 # Allied players have account_name starting with ':'
                 is_ally = acc_name.startswith(':') if acc_name else False
                 
+                # Get human-readable profession/spec names
+                prof_name = PROFESSION_NAMES.get(agent.prof, "Unknown")
+                elite_name = ELITE_SPEC_NAMES.get(agent.is_elite, "") if agent.is_elite != 0 else ""
+                spec_name = get_spec_name(agent.prof, agent.is_elite)
+                
                 player_stats[agent.addr] = PlayerStatsData(
                     addr=agent.addr,
                     character_name=char_name,
                     account_name=acc_name,
                     profession=agent.prof,
                     elite_spec=agent.is_elite,
+                    profession_name=prof_name,
+                    elite_spec_name=elite_name,
+                    spec_name=spec_name,
                     subgroup=subgroup,
                     is_ally=is_ally
                 )

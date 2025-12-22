@@ -57,6 +57,7 @@ class PlayerStats(Base):
     account_name = Column(String, nullable=True)
     profession = Column(String, nullable=True)
     elite_spec = Column(String, nullable=True)
+    spec_name = Column(String, nullable=True)
     
     subgroup = Column(Integer, default=0, nullable=False)
     

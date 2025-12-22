@@ -168,6 +168,7 @@ def process_log_file_sync(
                 account_name=stats.account_name,
                 profession=str(stats.profession),
                 elite_spec=str(stats.elite_spec),
+                spec_name=stats.spec_name,
                 subgroup=stats.subgroup,
                 total_damage=stats.total_damage,
                 dps=dps,
