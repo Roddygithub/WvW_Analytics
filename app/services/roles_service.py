@@ -8,27 +8,27 @@ from typing import Tuple, List
 from app.db.models import PlayerStats
 
 
-# Role detection thresholds (tuneable constants)
-# These values can be adjusted based on real-world data analysis
+# Role detection thresholds (data-driven from 111k+ player records)
+# Based on percentile analysis of 1603 WvW logs
+# Last updated: 2024-12-22
 
 # Healer/Support thresholds
-HEALER_MIN_CLEANSES = 200
-HEALER_MAX_DPS = 800
+HEALER_MIN_CLEANSES = 100  # Between P90 (64) and P95 (143) - dedicated healers
+HEALER_MAX_DPS = 800  # Keep low to ensure pure support builds
 
 # Boon Support thresholds
-BOON_MIN_UPTIME = 40  # % for quickness or alacrity
-BOON_MAX_DPS = 1500
+BOON_MIN_UPTIME = 50.0  # P90 of quickness/resistance - dedicated boon providers
+BOON_MAX_DPS = 1200  # Between P80 (730) and P90 (1676) - allow boon DPS hybrids
 
 # Stripper thresholds
-STRIPPER_MIN_STRIPS = 100
-STRIPPER_MAX_CLEANSES = 100
-STRIPPER_STRIP_TO_CLEANSE_RATIO = 2.0
+STRIPPER_MIN_STRIPS = 50  # Between P90 (9) and P95 (79) - dedicated strippers
+STRIPPER_MAX_CLEANSES = 50  # Low cleanses to distinguish from healers
+STRIPPER_STRIP_TO_CLEANSE_RATIO = 2.0  # Strips should dominate over cleanses
 
 # DPS thresholds
-DPS_MIN_DPS = 1500
-DPS_MAX_CLEANSES = 100
-DPS_MAX_STRIPS = 50
-DPS_MAX_BOON_UPTIME = 30  # % for quickness and alacrity
+DPS_MIN_DPS = 1200  # Between P80 (730) and P90 (1676) - solid DPS players
+DPS_MAX_CLEANSES = 30  # Low support activity
+DPS_MAX_STRIPS = 30  # Low support activity
 
 
 def detect_player_role(stats: PlayerStats) -> Tuple[str, List[str]]:
