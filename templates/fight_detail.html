@@ -64,18 +64,75 @@
     <div class="p-24 border-b border-border-subtle">
         <h2 class="text-lg font-bold text-text-main">Player Statistics</h2>
     </div>
-    <div class="overflow-x-auto">
+    <div class="overflow-x-auto relative">
+        <div class="absolute top-0 right-0 bottom-0 w-32 bg-gradient-to-l from-surface-elevated to-transparent pointer-events-none"></div>
         <table class="w-full text-sm">
             <thead class="bg-surface-base border-b border-border-subtle">
                 <tr class="text-left">
-                    <th class="px-16 py-12 font-semibold text-text-main">Character</th>
-                    <th class="px-16 py-12 font-semibold text-text-main">Account</th>
-                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">DPS</th>
-                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">Damage</th>
-                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">Downs</th>
-                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">Kills</th>
-                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">Deaths</th>
-                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">Dmg Taken</th>
+                    <th class="px-16 py-12 font-semibold text-text-main cursor-pointer hover:bg-surface-elevated transition-colors">
+                        <div class="inline-flex items-center gap-8">
+                            Character
+                            <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="px-16 py-12 font-semibold text-text-main cursor-pointer hover:bg-surface-elevated transition-colors">
+                        <div class="inline-flex items-center gap-8">
+                            Account
+                            <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                        <div class="inline-flex items-center gap-8 justify-end">
+                            DPS
+                            <svg class="w-16 h-16 text-gw2-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                        <div class="inline-flex items-center gap-8 justify-end">
+                            Damage
+                            <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                        <div class="inline-flex items-center gap-8 justify-end">
+                            Downs
+                            <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                        <div class="inline-flex items-center gap-8 justify-end">
+                            Kills
+                            <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                        <div class="inline-flex items-center gap-8 justify-end">
+                            Deaths
+                            <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                            </svg>
+                        </div>
+                    </th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                        <div class="inline-flex items-center gap-8 justify-end">
+                            Dmg Taken
+                            <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                            </svg>
+                        </div>
+                    </th>
                 </tr>
             </thead>
             <tbody>
