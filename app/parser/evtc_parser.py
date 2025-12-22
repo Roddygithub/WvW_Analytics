@@ -493,6 +493,14 @@ class EVTCParser:
         downed_results = 0
         killingblow_results = 0
         
+        # Debug: count buff events
+        buff_apply_events = 0
+        quickness_events = 0
+        alacrity_events = 0
+        might_events = 0
+        stability_events = 0
+        unique_buff_ids = set()
+        
         player_stats: dict[int, PlayerStatsData] = {}
         
         # Initialize stats for all player agents
@@ -570,14 +578,27 @@ class EVTCParser:
             
             # Buff apply events (buff != 0, buff_dmg == 0, value > 0)
             elif event.buff != 0 and event.buff_dmg == 0 and event.value > 0:
-                # Buff applied to dst_agent
+                buff_apply_events += 1
+                unique_buff_ids.add(event.skillid)
+                
+                # Count specific boons
+                if event.skillid == BoonID.QUICKNESS:
+                    quickness_events += 1
+                elif event.skillid == BoonID.ALACRITY:
+                    alacrity_events += 1
+                elif event.skillid == BoonID.MIGHT:
+                    might_events += 1
+                elif event.skillid == BoonID.STABILITY:
+                    stability_events += 1
+                
+                # Buff applied to dst_agent - USE SKILLID NOT BUFF!
                 if event.dst_agent in player_stats:
                     if event.dst_agent not in active_boons:
                         active_boons[event.dst_agent] = {}
-                    if event.buff not in active_boons[event.dst_agent]:
-                        active_boons[event.dst_agent][event.buff] = []
+                    if event.skillid not in active_boons[event.dst_agent]:
+                        active_boons[event.dst_agent][event.skillid] = []
                     # Store (start_time, duration) for this buff application
-                    active_boons[event.dst_agent][event.buff].append((event.time, event.value))
+                    active_boons[event.dst_agent][event.skillid].append((event.time, event.value))
             
             # Condition damage events (buff != 0, buff_dmg > 0)
             elif event.buff != 0 and event.buff_dmg > 0:
@@ -641,5 +662,17 @@ class EVTCParser:
             downed_results,
             killingblow_results,
         )
+        logger.info(
+            "Buff debug for %s: buff_apply=%d, quick=%d, alac=%d, might=%d, stab=%d, unique_buffs=%d",
+            self.file_path.name,
+            buff_apply_events,
+            quickness_events,
+            alacrity_events,
+            might_events,
+            stability_events,
+            len(unique_buff_ids),
+        )
+        if len(unique_buff_ids) > 0:
+            logger.info("Sample buff IDs seen: %s", sorted(list(unique_buff_ids))[:20])
         
         return player_stats
