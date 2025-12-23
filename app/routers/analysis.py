@@ -13,13 +13,15 @@ templates = Jinja2Templates(directory="templates")
 
 BOON_COLUMNS = [
     {"key": "quickness", "label": "Quickness", "uptime_attr": "quickness_uptime", "out_attr": "quickness_out_ms"},
-    {"key": "protection", "label": "Protection", "uptime_attr": "protection_uptime", "out_attr": "protection_out_ms"},
-    {"key": "vigor", "label": "Vigor", "uptime_attr": "vigor_uptime", "out_attr": "vigor_out_ms"},
-    {"key": "aegis", "label": "Aegis", "uptime_attr": "aegis_uptime", "out_attr": "aegis_out_ms"},
-    {"key": "stability", "label": "Stability", "uptime_attr": "stability_uptime", "out_attr": "stab_out_ms"},
     {"key": "resistance", "label": "Resistance", "uptime_attr": "resistance_uptime", "out_attr": "resistance_out_ms"},
     {"key": "superspeed", "label": "Superspeed", "uptime_attr": "superspeed_uptime", "out_attr": "superspeed_out_ms"},
+    {"key": "stability", "label": "Stability", "uptime_attr": "stability_uptime", "out_attr": "stab_out_ms"},
+    {"key": "aegis", "label": "Aegis", "uptime_attr": "aegis_uptime", "out_attr": "aegis_out_ms"},
+    {"key": "protection", "label": "Protection", "uptime_attr": "protection_uptime", "out_attr": "protection_out_ms"},
+    {"key": "vigor", "label": "Vigor", "uptime_attr": "vigor_uptime", "out_attr": "vigor_out_ms"},
 ]
+
+SQUAD_DEFAULT_BOONS = ["quickness", "resistance", "superspeed", "stability", "aegis"]
 ALLIED_NUMERIC_COLUMNS = [
     {"key": "dps", "label": "DPS", "attr": "dps"},
     {"key": "damage", "label": "Damage", "attr": "total_damage"},
@@ -32,7 +34,7 @@ ALLIED_NUMERIC_COLUMNS = [
     {"key": "cc_total", "label": "CC", "attr": "cc_total"},
 ]
 
-ALLIED_BOON_COLUMNS = [
+BOON_GENERATION_COLUMNS = [
     {
         "key": "quickness_out",
         "label": "Quickness (s)",
@@ -75,13 +77,44 @@ ALLIED_BOON_COLUMNS = [
         "attr": "superspeed_out_ms",
         "display_attr": "superspeed_out_s",
     },
+    {
+        "key": "stability_out",
+        "label": "Stability (s)",
+        "attr": "stab_out_ms",
+        "display_attr": "stability_out_s",
+    },
+    {
+        "key": "alacrity_out",
+        "label": "Alacrity (s)",
+        "attr": "alacrity_out_ms",
+        "display_attr": "alacrity_out_s",
+    },
+    {
+        "key": "fury_out",
+        "label": "Fury (s)",
+        "attr": "fury_out_ms",
+        "display_attr": "fury_out_s",
+    },
+    {
+        "key": "regeneration_out",
+        "label": "Regeneration (s)",
+        "attr": "regeneration_out_ms",
+        "display_attr": "regeneration_out_s",
+    },
+    {
+        "key": "might_out",
+        "label": "Might (stack-s)",
+        "attr": "might_out_stacks",
+        "display_attr": "might_out_stack_seconds",
+    },
 ]
 
-ALLIED_SORT_COLUMNS = {
-    col["key"]: col for col in [*ALLIED_NUMERIC_COLUMNS, *ALLIED_BOON_COLUMNS]
-}
+ALLIED_SORT_COLUMNS = {col["key"]: col for col in ALLIED_NUMERIC_COLUMNS}
+BOON_SORT_COLUMNS = {col["key"]: col for col in BOON_GENERATION_COLUMNS}
 DEFAULT_ALLIED_SORT = "dps"
 DEFAULT_ALLIED_DIR = "desc"
+DEFAULT_BOON_SORT = "quickness_out"
+DEFAULT_BOON_DIR = "desc"
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -179,9 +212,11 @@ async def view_fight(
     allied_players = [p for p in fight.player_stats if p.account_name]
     show_boon_columns = bool(show_boons)
 
+    fight_duration_ms = fight.duration_ms or 0
+
     # Squad boon uptimes per subgroup
-    group_totals: dict[int, dict] = defaultdict(lambda: {"count": 0, "boon_sums": defaultdict(float)})
-    squad_total = {"count": 0, "boon_sums": defaultdict(float)}
+    group_totals: dict[int, dict] = defaultdict(lambda: {"count": 0, "boon_active_ms": defaultdict(float)})
+    squad_total = {"count": 0, "boon_active_ms": defaultdict(float)}
 
     for player in allied_players:
         subgroup = player.subgroup or 0
@@ -190,16 +225,22 @@ async def view_fight(
         squad_total["count"] += 1
 
         for column in BOON_COLUMNS:
-            value = getattr(player, column["uptime_attr"], 0.0) or 0.0
-            group_entry["boon_sums"][column["key"]] += value
-            squad_total["boon_sums"][column["key"]] += value
+            uptime_percent = getattr(player, column["uptime_attr"], 0.0) or 0.0
+            normalized_percent = min(100.0, max(0.0, float(uptime_percent)))
+            active_ms = (normalized_percent / 100.0) * fight_duration_ms if fight_duration_ms else 0.0
+            group_entry["boon_active_ms"][column["key"]] += active_ms
+            squad_total["boon_active_ms"][column["key"]] += active_ms
 
     def build_boon_row(label: str, data: dict, group_number: int | None = None) -> dict:
         boons = {}
         count = data["count"]
         for column in BOON_COLUMNS:
-            avg_value = (data["boon_sums"][column["key"]] / count) if count else 0.0
-            boons[column["key"]] = round(avg_value, 1)
+            denominator = (fight_duration_ms * count)
+            if denominator > 0:
+                uptime_pct = (data["boon_active_ms"][column["key"]] / denominator) * 100.0
+                boons[column["key"]] = round(min(100.0, max(0.0, uptime_pct)), 1)
+            else:
+                boons[column["key"]] = 0.0
         return {
             "label": label,
             "group": group_number,

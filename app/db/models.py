@@ -138,3 +138,19 @@ class PlayerStats(Base):
     @property
     def superspeed_out_s(self) -> float:
         return self._ms_to_seconds(self.superspeed_out_ms)
+
+    @property
+    def alacrity_out_s(self) -> float:
+        return self._ms_to_seconds(self.alacrity_out_ms)
+
+    @property
+    def fury_out_s(self) -> float:
+        return self._ms_to_seconds(self.fury_out_ms)
+
+    @property
+    def regeneration_out_s(self) -> float:
+        return self._ms_to_seconds(self.regeneration_out_ms)
+
+    @property
+    def might_out_stack_seconds(self) -> float:
+        return float(self.might_out_stacks or 0) / 1000.0

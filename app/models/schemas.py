@@ -61,6 +61,10 @@ class PlayerStatsBase(BaseModel):
     stability_out_s: float = 0.0
     resistance_out_s: float = 0.0
     superspeed_out_s: float = 0.0
+    alacrity_out_s: float = 0.0
+    fury_out_s: float = 0.0
+    regeneration_out_s: float = 0.0
+    might_out_stack_seconds: float = 0.0
     
     detected_role: Optional[str] = None
 
