@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Enum as SQLEnum, BigInteger
 from sqlalchemy.orm import relationship
 import enum
 
@@ -61,22 +61,22 @@ class PlayerStats(Base):
     
     subgroup = Column(Integer, default=0, nullable=False)
     
-    total_damage = Column(Integer, default=0, nullable=False)
+    total_damage = Column(BigInteger, default=0, nullable=False)
     dps = Column(Float, default=0.0, nullable=False)
     
     downs = Column(Integer, default=0, nullable=False)
     kills = Column(Integer, default=0, nullable=False)
     deaths = Column(Integer, default=0, nullable=False)
     
-    damage_taken = Column(Integer, default=0, nullable=False)
+    damage_taken = Column(BigInteger, default=0, nullable=False)
     
-    cc_total = Column(Integer, default=0, nullable=False)
-    strips_out = Column(Integer, default=0, nullable=False)
-    strips_in = Column(Integer, default=0, nullable=False)
-    cleanses = Column(Integer, default=0, nullable=False)
+    cc_total = Column(BigInteger, default=0, nullable=False)
+    strips_out = Column(BigInteger, default=0, nullable=False)
+    strips_in = Column(BigInteger, default=0, nullable=False)
+    cleanses = Column(BigInteger, default=0, nullable=False)
     
-    healing_out = Column(Integer, default=0, nullable=False)
-    barrier_out = Column(Integer, default=0, nullable=False)
+    healing_out = Column(BigInteger, default=0, nullable=False)
+    barrier_out = Column(BigInteger, default=0, nullable=False)
     
     stability_uptime = Column(Float, default=0.0, nullable=False)
     quickness_uptime = Column(Float, default=0.0, nullable=False)
@@ -90,15 +90,15 @@ class PlayerStats(Base):
     vigor_uptime = Column(Float, default=0.0, nullable=False)
     
     # Outgoing boon production (milliseconds given to allies)
-    stab_out_ms = Column(Integer, default=0, nullable=False)
-    aegis_out_ms = Column(Integer, default=0, nullable=False)
-    protection_out_ms = Column(Integer, default=0, nullable=False)
-    quickness_out_ms = Column(Integer, default=0, nullable=False)
-    alacrity_out_ms = Column(Integer, default=0, nullable=False)
-    resistance_out_ms = Column(Integer, default=0, nullable=False)
-    might_out_stacks = Column(Integer, default=0, nullable=False)
-    fury_out_ms = Column(Integer, default=0, nullable=False)
-    regeneration_out_ms = Column(Integer, default=0, nullable=False)
+    stab_out_ms = Column(BigInteger, default=0, nullable=False)
+    aegis_out_ms = Column(BigInteger, default=0, nullable=False)
+    protection_out_ms = Column(BigInteger, default=0, nullable=False)
+    quickness_out_ms = Column(BigInteger, default=0, nullable=False)
+    alacrity_out_ms = Column(BigInteger, default=0, nullable=False)
+    resistance_out_ms = Column(BigInteger, default=0, nullable=False)
+    might_out_stacks = Column(BigInteger, default=0, nullable=False)
+    fury_out_ms = Column(BigInteger, default=0, nullable=False)
+    regeneration_out_ms = Column(BigInteger, default=0, nullable=False)
     
     detected_role = Column(String, nullable=True)
     
