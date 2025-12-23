@@ -96,12 +96,12 @@ class PlayerStats(Base):
     protection_out_ms = Column(BigInteger, default=0, nullable=False)
     quickness_out_ms = Column(BigInteger, default=0, nullable=False)
     alacrity_out_ms = Column(BigInteger, default=0, nullable=False)
+    superspeed_out_ms = Column(BigInteger, default=0, nullable=False)
     resistance_out_ms = Column(BigInteger, default=0, nullable=False)
     might_out_stacks = Column(BigInteger, default=0, nullable=False)
     fury_out_ms = Column(BigInteger, default=0, nullable=False)
     regeneration_out_ms = Column(BigInteger, default=0, nullable=False)
     vigor_out_ms = Column(BigInteger, default=0, nullable=False)
-    superspeed_out_ms = Column(BigInteger, default=0, nullable=False)
     
     detected_role = Column(String, nullable=True)
     
