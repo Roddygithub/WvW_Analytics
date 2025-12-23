@@ -54,6 +54,14 @@ class PlayerStatsBase(BaseModel):
     vigor_out_ms: int = 0
     superspeed_out_ms: int = 0
     
+    quickness_out_s: float = 0.0
+    protection_out_s: float = 0.0
+    vigor_out_s: float = 0.0
+    aegis_out_s: float = 0.0
+    stability_out_s: float = 0.0
+    resistance_out_s: float = 0.0
+    superspeed_out_s: float = 0.0
+    
     detected_role: Optional[str] = None
 
 

@@ -36,13 +36,48 @@ ALLIED_NUMERIC_COLUMNS = [
 ]
 
 ALLIED_BOON_COLUMNS = [
-    {"key": "quickness_out", "label": "Quickness (s)", "attr": "quickness_out_ms", "divisor": 1000},
-    {"key": "protection_out", "label": "Protection (s)", "attr": "protection_out_ms", "divisor": 1000},
-    {"key": "vigor_out", "label": "Vigor (s)", "attr": "vigor_out_ms", "divisor": 1000},
-    {"key": "aegis_out", "label": "Aegis (s)", "attr": "aegis_out_ms", "divisor": 1000},
-    {"key": "stability_out", "label": "Stability (s)", "attr": "stab_out_ms", "divisor": 1000},
-    {"key": "resistance_out", "label": "Resistance (s)", "attr": "resistance_out_ms", "divisor": 1000},
-    {"key": "superspeed_out", "label": "Superspeed (s)", "attr": "superspeed_out_ms", "divisor": 1000},
+    {
+        "key": "quickness_out",
+        "label": "Quickness (s)",
+        "attr": "quickness_out_ms",
+        "display_attr": "quickness_out_s",
+    },
+    {
+        "key": "protection_out",
+        "label": "Protection (s)",
+        "attr": "protection_out_ms",
+        "display_attr": "protection_out_s",
+    },
+    {
+        "key": "vigor_out",
+        "label": "Vigor (s)",
+        "attr": "vigor_out_ms",
+        "display_attr": "vigor_out_s",
+    },
+    {
+        "key": "aegis_out",
+        "label": "Aegis (s)",
+        "attr": "aegis_out_ms",
+        "display_attr": "aegis_out_s",
+    },
+    {
+        "key": "stability_out",
+        "label": "Stability (s)",
+        "attr": "stab_out_ms",
+        "display_attr": "stability_out_s",
+    },
+    {
+        "key": "resistance_out",
+        "label": "Resistance (s)",
+        "attr": "resistance_out_ms",
+        "display_attr": "resistance_out_s",
+    },
+    {
+        "key": "superspeed_out",
+        "label": "Superspeed (s)",
+        "attr": "superspeed_out_ms",
+        "display_attr": "superspeed_out_s",
+    },
 ]
 
 ALLIED_SORT_COLUMNS = {

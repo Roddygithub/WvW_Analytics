@@ -106,3 +106,35 @@ class PlayerStats(Base):
     detected_role = Column(String, nullable=True)
     
     fight = relationship("Fight", back_populates="player_stats")
+
+    @staticmethod
+    def _ms_to_seconds(value: int | float | None) -> float:
+        return float(value or 0) / 1000.0
+
+    @property
+    def quickness_out_s(self) -> float:
+        return self._ms_to_seconds(self.quickness_out_ms)
+
+    @property
+    def protection_out_s(self) -> float:
+        return self._ms_to_seconds(self.protection_out_ms)
+
+    @property
+    def vigor_out_s(self) -> float:
+        return self._ms_to_seconds(self.vigor_out_ms)
+
+    @property
+    def aegis_out_s(self) -> float:
+        return self._ms_to_seconds(self.aegis_out_ms)
+
+    @property
+    def stability_out_s(self) -> float:
+        return self._ms_to_seconds(self.stab_out_ms)
+
+    @property
+    def resistance_out_s(self) -> float:
+        return self._ms_to_seconds(self.resistance_out_ms)
+
+    @property
+    def superspeed_out_s(self) -> float:
+        return self._ms_to_seconds(self.superspeed_out_ms)
