@@ -65,10 +65,30 @@
 
 {% if squad_boon_uptimes %}
 <div class="bg-surface-elevated border border-border-subtle rounded overflow-hidden mb-32">
-    <div class="p-24 border-b border-border-subtle flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div class="p-24 border-b border-border-subtle flex flex-col gap-12 md:flex-row md:items-center md:justify-between">
         <div>
             <h2 class="text-lg font-bold text-text-main">Squad Boon Uptimes</h2>
             <p class="text-sm text-text-muted">Average uptime per subgroup (allies only)</p>
+        </div>
+        <div class="flex items-center gap-12">
+            <span class="text-sm text-text-muted">Detailed boon generation</span>
+            <a href="{{ boon_toggle_off_url if show_boon_columns else boon_toggle_on_url }}"
+               class="inline-flex items-center gap-8 px-16 py-8 rounded border transition-colors
+                      {% if show_boon_columns %}
+                          border-status-success text-status-success bg-status-success/10
+                      {% else %}
+                          border-border-subtle text-text-muted hover:text-text-main
+                      {% endif %}">
+                {% if show_boon_columns %}
+                <span>Hide</span>
+                {% else %}
+                <span>Show</span>
+                {% endif %}
+                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M5 13l4 4L19 7"></path>
+                </svg>
+            </a>
         </div>
     </div>
     <div class="overflow-x-auto relative">
@@ -78,7 +98,7 @@
                 <tr class="text-left">
                     <th class="px-16 py-12 font-semibold text-text-main">Group</th>
                     <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">Players</th>
-                    {% for boon in boon_columns %}
+                    {% for boon in squad_boon_columns %}
                     <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">
                         {{ boon.label }}
                     </th>
@@ -90,7 +110,7 @@
                 <tr class="border-b border-border-subtle hover:bg-surface-base transition-colors">
                     <td class="px-16 py-12 text-text-main font-semibold">{{ row.label }}</td>
                     <td class="px-16 py-12 text-right text-text-main font-tabular">{{ row.player_count }}</td>
-                    {% for boon in boon_columns %}
+                    {% for boon in squad_boon_columns %}
                     {% set value = row.boons[boon.key] %}
                     <td class="px-16 py-12 text-right font-tabular {% if value >= 90 %}text-status-success{% elif value >= 50 %}text-status-warning{% else %}text-text-muted{% endif %}">
                         {{ '{:.0f}'.format(value) }}%
@@ -102,6 +122,75 @@
         </table>
     </div>
 </div>
+{% if show_boon_columns %}
+<div class="bg-surface-elevated border border-border-subtle rounded overflow-hidden mb-32">
+    <div class="p-24 border-b border-border-subtle">
+        <h2 class="text-lg font-bold text-text-main">Detailed Boon Generation</h2>
+        <p class="text-sm text-text-muted">Per-player outgoing boon duration (seconds)</p>
+    </div>
+    <div class="overflow-x-auto relative">
+        <div class="absolute top-0 right-0 bottom-0 w-32 bg-gradient-to-l from-surface-elevated to-transparent pointer-events-none"></div>
+        <table class="w-full text-sm">
+            <thead class="bg-surface-base border-b border-border-subtle">
+                <tr class="text-left">
+                    <th class="px-16 py-12 font-semibold text-text-main">Character</th>
+                    <th class="px-16 py-12 font-semibold text-text-main">Account</th>
+                    <th class="px-16 py-12 font-semibold text-text-main">Class</th>
+                    <th class="px-16 py-12 font-semibold text-text-main">Role</th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">Group</th>
+                    {% for column in boon_generation_columns %}
+                    {% set sort = boon_sort_links[column.key] %}
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">
+                        <a href="{{ sort.url }}" class="inline-flex items-center gap-8 justify-end hover:text-text-main">
+                            {{ column.label }}
+                            <svg class="w-16 h-16 {% if sort.active %}text-gw2-gold{% else %}text-text-muted{% endif %}"
+                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                {% if sort.active and sort.direction == 'desc' %}
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                {% else %}
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                {% endif %}
+                            </svg>
+                        </a>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for player in boon_players %}
+                <tr class="border-b border-border-subtle hover:bg-surface-base transition-colors">
+                    <td class="px-16 py-12 text-text-main">{{ player.character_name }}</td>
+                    <td class="px-16 py-12 text-text-muted text-xs">{{ player.account_name }}</td>
+                    <td class="px-16 py-12 text-text-main text-sm">{{ player.spec_name or player.profession or 'Unknown' }}</td>
+                    <td class="px-16 py-12">
+                        <span class="inline-block px-8 py-4 rounded text-xs font-semibold
+                            {% if player.detected_role == 'Pure DPS' %}bg-status-error bg-opacity-20 text-status-error
+                            {% elif player.detected_role == 'Strip DPS' %}bg-orange-500 bg-opacity-20 text-orange-400
+                            {% elif player.detected_role == 'Boon Support' %}bg-blue-500 bg-opacity-20 text-blue-400
+                            {% elif player.detected_role == 'Stab Support' %}bg-cyan-500 bg-opacity-20 text-cyan-400
+                            {% elif player.detected_role == 'Healer' %}bg-status-success bg-opacity-20 text-status-success
+                            {% else %}bg-text-muted bg-opacity-20 text-text-muted
+                            {% endif %}">
+                            {{ player.detected_role or 'Unknown' }}
+                        </span>
+                    </td>
+                    <td class="px-16 py-12 text-right font-tabular text-text-muted">
+                        {{ player.subgroup or '—' }}
+                    </td>
+                    {% for column in boon_generation_columns %}
+                    {% set display_attr = column.display_attr if column.display_attr is defined else column.attr %}
+                    {% set boon_seconds = player|attr(display_attr) %}
+                    <td class="px-16 py-12 text-right font-tabular {% if boon_seconds and boon_seconds > 0 %}text-text-main{% else %}text-text-muted{% endif %}">
+                        {{ '{:,.1f}'.format((boon_seconds or 0)) }}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
 {% endif %}
 
 {% if fight.player_stats %}

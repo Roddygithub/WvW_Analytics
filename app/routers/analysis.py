@@ -196,6 +196,8 @@ async def view_fight(
     fight_id: int,
     allied_sort: str = Query(DEFAULT_ALLIED_SORT),
     allied_dir: str = Query(DEFAULT_ALLIED_DIR),
+    boon_sort: str = Query(DEFAULT_BOON_SORT),
+    boon_dir: str = Query(DEFAULT_BOON_DIR),
     show_boons: int = Query(0),
     db: Session = Depends(get_db)
 ) -> HTMLResponse:
@@ -292,11 +294,64 @@ async def view_fight(
         column_key: sort_link_for(column_key) for column_key in ALLIED_SORT_COLUMNS.keys()
     }
 
-    boon_toggle_url = request.url.include_query_params(
-        show_boons=int(not show_boon_columns),
+    boon_sort_key = (boon_sort or DEFAULT_BOON_SORT).lower()
+    if boon_sort_key not in BOON_SORT_COLUMNS:
+        boon_sort_key = DEFAULT_BOON_SORT
+
+    boon_sort_dir = boon_dir.lower()
+    if boon_sort_dir not in {"asc", "desc"}:
+        boon_sort_dir = DEFAULT_BOON_DIR
+
+    def boon_value(player, column_key: str) -> float:
+        column = BOON_SORT_COLUMNS[column_key]
+        attr_name = column.get("display_attr") or column["attr"]
+        value = getattr(player, attr_name, 0.0) or 0.0
+        return float(value)
+
+    boon_players_sorted = sorted(
+        allied_players,
+        key=lambda player: boon_value(player, boon_sort_key),
+        reverse=(boon_sort_dir == "desc"),
+    )
+
+    def boon_sort_link_for(column_key: str) -> dict:
+        column_active = boon_sort_key == column_key
+        next_dir = "asc" if column_active and boon_sort_dir == "desc" else "desc"
+        url = request.url.include_query_params(
+            allied_sort=allied_sort_key,
+            allied_dir=allied_sort_dir,
+            boon_sort=column_key,
+            boon_dir=next_dir,
+            show_boons=int(show_boon_columns),
+        )
+        return {
+            "url": str(url),
+            "active": column_active,
+            "direction": boon_sort_dir if column_active else "desc",
+        }
+
+    boon_sort_links = {
+        column_key: boon_sort_link_for(column_key) for column_key in BOON_SORT_COLUMNS.keys()
+    }
+
+    toggle_on_url = request.url.include_query_params(
+        show_boons=1,
         allied_sort=allied_sort_key,
         allied_dir=allied_sort_dir,
+        boon_sort=boon_sort_key,
+        boon_dir=boon_sort_dir,
     )
+    toggle_off_url = request.url.include_query_params(
+        show_boons=0,
+        allied_sort=allied_sort_key,
+        allied_dir=allied_sort_dir,
+        boon_sort=boon_sort_key,
+        boon_dir=boon_sort_dir,
+    )
+
+    squad_boon_columns = [
+        column for column in BOON_COLUMNS if column["key"] in SQUAD_DEFAULT_BOONS
+    ]
 
     return templates.TemplateResponse(
         "fight_detail.html",
@@ -304,15 +359,20 @@ async def view_fight(
             "request": request,
             "page": "analyze",
             "fight": fight,
-            "boon_columns": BOON_COLUMNS,
+            "squad_boon_columns": squad_boon_columns,
             "squad_boon_uptimes": squad_boon_uptimes,
             "allied_players": allied_players_sorted,
             "allied_numeric_columns": ALLIED_NUMERIC_COLUMNS,
-            "allied_boon_columns": ALLIED_BOON_COLUMNS,
             "allied_sort": allied_sort_key,
             "allied_sort_dir": allied_sort_dir,
             "allied_sort_links": allied_sort_links,
+            "boon_generation_columns": BOON_GENERATION_COLUMNS,
+            "boon_players": boon_players_sorted,
+            "boon_sort": boon_sort_key,
+            "boon_sort_dir": boon_sort_dir,
+            "boon_sort_links": boon_sort_links,
             "show_boon_columns": show_boon_columns,
-            "boon_toggle_url": str(boon_toggle_url),
+            "boon_toggle_on_url": str(toggle_on_url),
+            "boon_toggle_off_url": str(toggle_off_url),
         }
     )
