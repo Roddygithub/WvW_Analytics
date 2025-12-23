@@ -87,8 +87,11 @@ class PlayerStats(Base):
     aegis_uptime = Column(Float, default=0.0, nullable=False)
     resistance_uptime = Column(Float, default=0.0, nullable=False)
     resolution_uptime = Column(Float, default=0.0, nullable=False)
+    regeneration_uptime = Column(Float, default=0.0, nullable=False)
     vigor_uptime = Column(Float, default=0.0, nullable=False)
     superspeed_uptime = Column(Float, default=0.0, nullable=False)
+    swiftness_uptime = Column(Float, default=0.0, nullable=False)
+    stealth_uptime = Column(Float, default=0.0, nullable=False)
     
     # Outgoing boon production (milliseconds given to allies)
     stab_out_ms = Column(BigInteger, default=0, nullable=False)

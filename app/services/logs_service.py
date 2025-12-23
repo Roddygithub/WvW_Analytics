@@ -148,6 +148,9 @@ def process_log_file_sync(
             alacrity_uptime = 0.0
             vigor_uptime = 0.0
             superspeed_uptime = 0.0
+            regeneration_uptime = 0.0
+            swiftness_uptime = 0.0
+            stealth_uptime = 0.0
             might_avg = 0.0
             
             if duration_ms and duration_ms > 0:
@@ -160,6 +163,9 @@ def process_log_file_sync(
                 alacrity_uptime = min(100.0, (stats.alacrity_uptime_ms / duration_ms) * 100)
                 vigor_uptime = min(100.0, (stats.vigor_uptime_ms / duration_ms) * 100)
                 superspeed_uptime = min(100.0, (stats.superspeed_uptime_ms / duration_ms) * 100)
+                regeneration_uptime = min(100.0, (stats.regeneration_uptime_ms / duration_ms) * 100)
+                swiftness_uptime = min(100.0, (stats.swiftness_uptime_ms / duration_ms) * 100)
+                stealth_uptime = min(100.0, (stats.stealth_uptime_ms / duration_ms) * 100)
                 
                 # Might: average stacks (time-weighted)
                 if stats.might_sample_count > 0 and duration_ms > 0:
@@ -189,6 +195,9 @@ def process_log_file_sync(
                 alacrity_uptime=alacrity_uptime,
                 vigor_uptime=vigor_uptime,
                 superspeed_uptime=superspeed_uptime,
+                regeneration_uptime=regeneration_uptime,
+                swiftness_uptime=swiftness_uptime,
+                stealth_uptime=stealth_uptime,
                 might_uptime=might_avg,
                 strips_out=stats.strips,
                 cleanses=stats.cleanses,

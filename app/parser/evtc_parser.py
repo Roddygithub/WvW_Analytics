@@ -293,10 +293,13 @@ class PlayerStatsData:
     fury_uptime_ms: int = 0
     resistance_uptime_ms: int = 0
     alacrity_uptime_ms: int = 0
+    regeneration_uptime_ms: int = 0
     might_total_stacks: int = 0  # Sum of all might stacks over time
     might_sample_count: int = 0  # Number of samples for averaging
     vigor_uptime_ms: int = 0
     superspeed_uptime_ms: int = 0
+    swiftness_uptime_ms: int = 0
+    stealth_uptime_ms: int = 0
     
     # Support/Control stats
     strips: int = 0  # Boons removed from enemies
@@ -946,6 +949,18 @@ class EVTCParser:
             # Fury
             if BoonID.FURY in player_boons:
                 stats.fury_uptime_ms = merged_duration(player_boons[BoonID.FURY])
+            
+            # Regeneration
+            if BoonID.REGENERATION in player_boons:
+                stats.regeneration_uptime_ms = merged_duration(player_boons[BoonID.REGENERATION])
+            
+            # Swiftness
+            if BoonID.SWIFTNESS in player_boons:
+                stats.swiftness_uptime_ms = merged_duration(player_boons[BoonID.SWIFTNESS])
+            
+            # Stealth
+            if BoonID.STEALTH in player_boons:
+                stats.stealth_uptime_ms = merged_duration(player_boons[BoonID.STEALTH])
             
             # Resistance
             if BoonID.RESISTANCE in player_boons:
