@@ -66,6 +66,16 @@
             font-variant-numeric: tabular-nums;
         }
     </style>
+    <style>
+        th.sort-asc::after {
+            content: " ▲";
+            font-size: 0.8em;
+        }
+        th.sort-desc::after {
+            content: " ▼";
+            font-size: 0.8em;
+        }
+    </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body class="min-h-screen bg-gw2-dark text-text-main">
@@ -113,6 +123,71 @@
         </div>
     </footer>
 
+    <script>
+        function makeTableSortable(table) {
+            const thead = table.tHead;
+            if (!thead) return;
+
+            const headers = Array.from(thead.rows[0].cells);
+
+            headers.forEach((th, colIndex) => {
+                if (th.classList.contains('no-sort')) return;
+                let asc = true;
+
+                th.classList.add('cursor-pointer');
+                th.setAttribute('aria-sort', 'none');
+
+                th.addEventListener('click', (event) => {
+                    // Prevent default navigation if header contains links
+                    if (event.target.closest('a')) {
+                        event.preventDefault();
+                    }
+
+                    const tbody = table.tBodies[0];
+                    if (!tbody) return;
+
+                    const rows = Array.from(tbody.rows);
+                    const type = th.dataset.type || 'string';
+
+                    rows.sort((rowA, rowB) => {
+                        let a = rowA.cells[colIndex]?.innerText.trim() ?? '';
+                        let b = rowB.cells[colIndex]?.innerText.trim() ?? '';
+
+                        if (type === 'number') {
+                            const normalize = (val) => {
+                                const cleaned = val.replace(/[^0-9.+-]/g, '');
+                                const parsed = parseFloat(cleaned);
+                                return isNaN(parsed) ? 0 : parsed;
+                            };
+                            a = normalize(a);
+                            b = normalize(b);
+                        } else {
+                            a = a.toLowerCase();
+                            b = b.toLowerCase();
+                        }
+
+                        if (a < b) return asc ? -1 : 1;
+                        if (a > b) return asc ? 1 : -1;
+                        return 0;
+                    });
+
+                    rows.forEach(row => tbody.appendChild(row));
+                    asc = !asc;
+
+                    headers.forEach(h => {
+                        h.classList.remove('sort-asc', 'sort-desc');
+                        h.setAttribute('aria-sort', 'none');
+                    });
+                    th.classList.add(asc ? 'sort-asc' : 'sort-desc');
+                    th.setAttribute('aria-sort', asc ? 'ascending' : 'descending');
+                });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('table.sortable').forEach(makeTableSortable);
+        });
+    </script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

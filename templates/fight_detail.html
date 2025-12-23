@@ -93,13 +93,13 @@
     </div>
     <div class="overflow-x-auto relative">
         <div class="absolute top-0 right-0 bottom-0 w-32 bg-gradient-to-l from-surface-elevated to-transparent pointer-events-none"></div>
-        <table class="w-full text-sm">
+        <table class="w-full text-sm sortable">
             <thead class="bg-surface-base border-b border-border-subtle">
                 <tr class="text-left">
                     <th class="px-16 py-12 font-semibold text-text-main">Group</th>
-                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">Players</th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular" data-type="number">Players</th>
                     {% for boon in squad_boon_columns %}
-                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular" data-type="number">
                         {{ boon.label }}
                     </th>
                     {% endfor %}
@@ -130,17 +130,17 @@
     </div>
     <div class="overflow-x-auto relative">
         <div class="absolute top-0 right-0 bottom-0 w-32 bg-gradient-to-l from-surface-elevated to-transparent pointer-events-none"></div>
-        <table class="w-full text-sm">
+        <table class="w-full text-sm sortable">
             <thead class="bg-surface-base border-b border-border-subtle">
                 <tr class="text-left">
                     <th class="px-16 py-12 font-semibold text-text-main">Character</th>
                     <th class="px-16 py-12 font-semibold text-text-main">Account</th>
                     <th class="px-16 py-12 font-semibold text-text-main">Class</th>
                     <th class="px-16 py-12 font-semibold text-text-main">Role</th>
-                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">Group</th>
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular" data-type="number">Group</th>
                     {% for column in boon_generation_columns %}
                     {% set sort = boon_sort_links[column.key] %}
-                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular" data-type="number">
                         <a href="{{ sort.url }}" class="inline-flex items-center gap-8 justify-end hover:text-text-main">
                             {{ column.label }}
                             <svg class="w-16 h-16 {% if sort.active %}text-gw2-gold{% else %}text-text-muted{% endif %}"
@@ -200,7 +200,7 @@
     </div>
     <div class="overflow-x-auto relative">
         <div class="absolute top-0 right-0 bottom-0 w-32 bg-gradient-to-l from-surface-elevated to-transparent pointer-events-none"></div>
-        <table class="w-full text-sm">
+        <table class="w-full text-sm sortable">
             <thead class="bg-surface-base border-b border-border-subtle">
                 <tr class="text-left">
                     <th class="px-16 py-12 font-semibold text-text-main">Character</th>
@@ -209,7 +209,7 @@
                     <th class="px-16 py-12 font-semibold text-text-main">Role</th>
                     {% for column in allied_numeric_columns %}
                     {% set sort = allied_sort_links[column.key] %}
-                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular">
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular" data-type="number">
                         <a href="{{ sort.url }}" class="inline-flex items-center gap-8 justify-end hover:text-text-main">
                             {{ column.label }}
                             <svg class="w-16 h-16 {% if sort.active %}text-gw2-gold{% else %}text-text-muted{% endif %}"
@@ -282,7 +282,7 @@
     </div>
     <div class="overflow-x-auto relative">
         <div class="absolute top-0 right-0 bottom-0 w-32 bg-gradient-to-l from-surface-elevated to-transparent pointer-events-none"></div>
-        <table class="w-full text-sm">
+        <table class="w-full text-sm sortable">
             <thead class="bg-surface-base border-b border-border-subtle">
                 <tr class="text-left">
                     <th class="px-16 py-12 font-semibold text-text-main cursor-pointer hover:bg-surface-elevated transition-colors">
@@ -293,7 +293,7 @@
                             </svg>
                         </div>
                     </th>
-                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors" data-type="number">
                         <div class="inline-flex items-center gap-8 justify-end">
                             DPS
                             <svg class="w-16 h-16 text-gw2-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -301,7 +301,7 @@
                             </svg>
                         </div>
                     </th>
-                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors" data-type="number">
                         <div class="inline-flex items-center gap-8 justify-end">
                             Damage
                             <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -309,7 +309,7 @@
                             </svg>
                         </div>
                     </th>
-                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors" data-type="number">
                         <div class="inline-flex items-center gap-8 justify-end">
                             Downs
                             <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -317,7 +317,7 @@
                             </svg>
                         </div>
                     </th>
-                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors" data-type="number">
                         <div class="inline-flex items-center gap-8 justify-end">
                             Kills
                             <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -325,7 +325,7 @@
                             </svg>
                         </div>
                     </th>
-                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors" data-type="number">
                         <div class="inline-flex items-center gap-8 justify-end">
                             Deaths
                             <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -333,7 +333,7 @@
                             </svg>
                         </div>
                     </th>
-                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors">
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular cursor-pointer hover:bg-surface-elevated transition-colors" data-type="number">
                         <div class="inline-flex items-center gap-8 justify-end">
                             Dmg Taken
                             <svg class="w-16 h-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
