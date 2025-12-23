@@ -47,6 +47,7 @@ class BoonID(IntEnum):
     REGENERATION = 718
     VIGOR = 726
     SWIFTNESS = 719
+    SUPERSPEED = 5974  # Sprint boon
 
 
 # Skill ID sets for boons and conditions (subset based on EVTC spec)
@@ -64,6 +65,7 @@ BOON_SKILL_IDS: set[int] = {
     int(BoonID.REGENERATION),
     int(BoonID.VIGOR),
     int(BoonID.SWIFTNESS),
+    int(BoonID.SUPERSPEED),
 }
 
 # Common damaging/negative conditions from EVTC spec
@@ -291,6 +293,8 @@ class PlayerStatsData:
     alacrity_uptime_ms: int = 0
     might_total_stacks: int = 0  # Sum of all might stacks over time
     might_sample_count: int = 0  # Number of samples for averaging
+    vigor_uptime_ms: int = 0
+    superspeed_uptime_ms: int = 0
     
     # Support/Control stats
     strips: int = 0  # Boons removed from enemies
@@ -309,6 +313,8 @@ class PlayerStatsData:
     might_out_stacks: int = 0  # Might stacks given to allies (sum of stacks * duration)
     fury_out_ms: int = 0  # Fury given to allies
     regeneration_out_ms: int = 0  # Regeneration given to allies
+    vigor_out_ms: int = 0  # Vigor given to allies
+    superspeed_out_ms: int = 0  # Superspeed given to allies
 
 
 @dataclass
@@ -827,6 +833,14 @@ class EVTCParser:
             if BoonID.ALACRITY in player_boons:
                 stats.alacrity_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.ALACRITY])
             
+            # Vigor
+            if BoonID.VIGOR in player_boons:
+                stats.vigor_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.VIGOR])
+            
+            # Superspeed
+            if BoonID.SUPERSPEED in player_boons:
+                stats.superspeed_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.SUPERSPEED])
+            
             # Might - calculate average stacks by tracking active buff instances
             if BoonID.MIGHT in player_boons:
                 # For stacking buffs, each application is a separate instance
@@ -903,6 +917,14 @@ class EVTCParser:
             # Might outgoing - sum of (stacks * duration) for all applications
             if BoonID.MIGHT in player_outgoing:
                 stats.might_out_stacks = sum(duration * stacks for _, duration, stacks in player_outgoing[BoonID.MIGHT])
+            
+            # Vigor outgoing
+            if BoonID.VIGOR in player_outgoing:
+                stats.vigor_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.VIGOR])
+            
+            # Superspeed outgoing
+            if BoonID.SUPERSPEED in player_outgoing:
+                stats.superspeed_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.SUPERSPEED])
         
         logger.info(
             "EVTC debug for %s: events=%d, direct=%d, ally_to_enemy=%d, changedown=%d, changedead=%d, res_downed=%d, res_killingblow=%d",

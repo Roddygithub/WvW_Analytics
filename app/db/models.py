@@ -88,6 +88,7 @@ class PlayerStats(Base):
     resistance_uptime = Column(Float, default=0.0, nullable=False)
     resolution_uptime = Column(Float, default=0.0, nullable=False)
     vigor_uptime = Column(Float, default=0.0, nullable=False)
+    superspeed_uptime = Column(Float, default=0.0, nullable=False)
     
     # Outgoing boon production (milliseconds given to allies)
     stab_out_ms = Column(BigInteger, default=0, nullable=False)
@@ -99,6 +100,8 @@ class PlayerStats(Base):
     might_out_stacks = Column(BigInteger, default=0, nullable=False)
     fury_out_ms = Column(BigInteger, default=0, nullable=False)
     regeneration_out_ms = Column(BigInteger, default=0, nullable=False)
+    vigor_out_ms = Column(BigInteger, default=0, nullable=False)
+    superspeed_out_ms = Column(BigInteger, default=0, nullable=False)
     
     detected_role = Column(String, nullable=True)
     

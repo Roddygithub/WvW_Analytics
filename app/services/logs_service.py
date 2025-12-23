@@ -146,6 +146,8 @@ def process_log_file_sync(
             fury_uptime = 0.0
             resistance_uptime = 0.0
             alacrity_uptime = 0.0
+            vigor_uptime = 0.0
+            superspeed_uptime = 0.0
             might_avg = 0.0
             
             if duration_ms and duration_ms > 0:
@@ -156,6 +158,8 @@ def process_log_file_sync(
                 fury_uptime = min(100.0, (stats.fury_uptime_ms / duration_ms) * 100)
                 resistance_uptime = min(100.0, (stats.resistance_uptime_ms / duration_ms) * 100)
                 alacrity_uptime = min(100.0, (stats.alacrity_uptime_ms / duration_ms) * 100)
+                vigor_uptime = min(100.0, (stats.vigor_uptime_ms / duration_ms) * 100)
+                superspeed_uptime = min(100.0, (stats.superspeed_uptime_ms / duration_ms) * 100)
                 
                 # Might: average stacks (time-weighted)
                 if stats.might_sample_count > 0 and duration_ms > 0:
@@ -183,6 +187,8 @@ def process_log_file_sync(
                 fury_uptime=fury_uptime,
                 resistance_uptime=resistance_uptime,
                 alacrity_uptime=alacrity_uptime,
+                vigor_uptime=vigor_uptime,
+                superspeed_uptime=superspeed_uptime,
                 might_uptime=might_avg,
                 strips_out=stats.strips,
                 cleanses=stats.cleanses,
@@ -198,6 +204,8 @@ def process_log_file_sync(
                 might_out_stacks=stats.might_out_stacks,
                 fury_out_ms=stats.fury_out_ms,
                 regeneration_out_ms=stats.regeneration_out_ms,
+                vigor_out_ms=stats.vigor_out_ms,
+                superspeed_out_ms=stats.superspeed_out_ms,
             )
             db.add(player_stat)
             

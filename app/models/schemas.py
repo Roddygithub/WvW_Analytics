@@ -40,6 +40,19 @@ class PlayerStatsBase(BaseModel):
     resistance_uptime: float = 0.0
     resolution_uptime: float = 0.0
     vigor_uptime: float = 0.0
+    superspeed_uptime: float = 0.0
+    
+    stab_out_ms: int = 0
+    aegis_out_ms: int = 0
+    protection_out_ms: int = 0
+    quickness_out_ms: int = 0
+    alacrity_out_ms: int = 0
+    resistance_out_ms: int = 0
+    might_out_stacks: int = 0
+    fury_out_ms: int = 0
+    regeneration_out_ms: int = 0
+    vigor_out_ms: int = 0
+    superspeed_out_ms: int = 0
     
     detected_role: Optional[str] = None
 
