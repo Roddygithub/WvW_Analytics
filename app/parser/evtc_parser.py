@@ -48,6 +48,7 @@ class BoonID(IntEnum):
     VIGOR = 726
     SWIFTNESS = 719
     SUPERSPEED = 5974  # Sprint boon
+    STEALTH = 130
 
 
 # Skill ID sets for boons and conditions (subset based on EVTC spec)
@@ -66,6 +67,7 @@ BOON_SKILL_IDS: set[int] = {
     int(BoonID.VIGOR),
     int(BoonID.SWIFTNESS),
     int(BoonID.SUPERSPEED),
+    int(BoonID.STEALTH),
 }
 
 # Common damaging/negative conditions from EVTC spec
