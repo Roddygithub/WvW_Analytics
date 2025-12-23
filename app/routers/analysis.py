@@ -12,16 +12,38 @@ router = APIRouter(prefix="/analyze", tags=["analysis"])
 templates = Jinja2Templates(directory="templates")
 
 BOON_COLUMNS = [
+    {"key": "might", "label": "Might", "uptime_attr": "might_uptime", "out_attr": "might_out_stacks"},
+    {"key": "fury", "label": "Fury", "uptime_attr": "fury_uptime", "out_attr": "fury_out_ms"},
     {"key": "quickness", "label": "Quickness", "uptime_attr": "quickness_uptime", "out_attr": "quickness_out_ms"},
-    {"key": "resistance", "label": "Resistance", "uptime_attr": "resistance_uptime", "out_attr": "resistance_out_ms"},
-    {"key": "superspeed", "label": "Superspeed", "uptime_attr": "superspeed_uptime", "out_attr": "superspeed_out_ms"},
-    {"key": "stability", "label": "Stability", "uptime_attr": "stability_uptime", "out_attr": "stab_out_ms"},
-    {"key": "aegis", "label": "Aegis", "uptime_attr": "aegis_uptime", "out_attr": "aegis_out_ms"},
+    {"key": "alacrity", "label": "Alacrity", "uptime_attr": "alacrity_uptime", "out_attr": "alacrity_out_ms"},
     {"key": "protection", "label": "Protection", "uptime_attr": "protection_uptime", "out_attr": "protection_out_ms"},
+    {"key": "regeneration", "label": "Regeneration", "uptime_attr": "regeneration_uptime", "out_attr": "regeneration_out_ms"},
     {"key": "vigor", "label": "Vigor", "uptime_attr": "vigor_uptime", "out_attr": "vigor_out_ms"},
+    {"key": "aegis", "label": "Aegis", "uptime_attr": "aegis_uptime", "out_attr": "aegis_out_ms"},
+    {"key": "stability", "label": "Stability", "uptime_attr": "stability_uptime", "out_attr": "stab_out_ms"},
+    {"key": "swiftness", "label": "Swiftness", "uptime_attr": "swiftness_uptime", "out_attr": None},
+    {"key": "resistance", "label": "Resistance", "uptime_attr": "resistance_uptime", "out_attr": "resistance_out_ms"},
+    {"key": "resolution", "label": "Resolution", "uptime_attr": "resolution_uptime", "out_attr": None},
+    {"key": "superspeed", "label": "Superspeed", "uptime_attr": "superspeed_uptime", "out_attr": "superspeed_out_ms"},
+    {"key": "stealth", "label": "Stealth", "uptime_attr": "stealth_uptime", "out_attr": None},
 ]
 
-SQUAD_DEFAULT_BOONS = ["quickness", "resistance", "superspeed", "stability", "aegis"]
+SQUAD_DEFAULT_BOONS = [
+    "might",
+    "fury",
+    "quickness",
+    "alacrity",
+    "protection",
+    "regeneration",
+    "vigor",
+    "aegis",
+    "stability",
+    "swiftness",
+    "resistance",
+    "resolution",
+    "superspeed",
+    "stealth",
+]
 ALLIED_NUMERIC_COLUMNS = [
     {"key": "dps", "label": "DPS", "attr": "dps"},
     {"key": "damage", "label": "Damage", "attr": "total_damage"},

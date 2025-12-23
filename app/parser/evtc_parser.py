@@ -651,10 +651,10 @@ class EVTCParser:
                     is_ally=is_ally
                 )
         
-        # Track active boons per player (received): {player_addr: {buff_id: [(start_time, duration, stack_info), ...]}}
-        active_boons: dict[int, dict[int, list[tuple[int, int]]]] = {}
+        # Track active boons per player (received): {player_addr: {buff_id: [(start_ms, end_ms, stack_info), ...]}}
+        active_boons: dict[int, dict[int, list[tuple[int, int, int]]]] = {}
         
-                # Track outgoing boons per player (given):
+        # Track outgoing boons per player (given):
         # {src_player: {buff_id: {dst_player: [(start_ms, end_ms, stack_count)]}}}
         outgoing_boons: dict[int, dict[int, dict[int, list[tuple[int, int, int]]]]] = {}
         
@@ -683,6 +683,42 @@ class EVTCParser:
             if timestamp >= squad_end:
                 return fight_duration_ms
             return timestamp - squad_start
+        
+        # Helper to compute merged duration from intervals
+        def merged_duration(intervals: list[tuple[int, int, int]], *, weight_by_stack: bool = False) -> int:
+            if not intervals:
+                return 0
+            # Sort by start time
+            sorted_intervals = sorted(intervals, key=lambda x: x[0])
+            if not weight_by_stack:
+                simplified = [(start, end) for start, end, _ in sorted_intervals]
+                total = 0
+                cur_start, cur_end = simplified[0]
+                for start, end in simplified[1:]:
+                    if start <= cur_end:
+                        cur_end = max(cur_end, end)
+                    else:
+                        total += cur_end - cur_start
+                        cur_start, cur_end = start, end
+                total += cur_end - cur_start
+                return total
+            else:
+                # For Might (stack count matters), expand timeline with deltas weighted by stacks
+                timeline: list[tuple[int, int]] = []
+                for start, end, stack in sorted_intervals:
+                    stack = max(1, stack)
+                    timeline.append((start, stack))
+                    timeline.append((end, -stack))
+                timeline.sort()
+                total_weighted = 0
+                current_stack = 0
+                last_time = timeline[0][0]
+                for time_point, delta in timeline:
+                    if time_point > last_time and current_stack > 0:
+                        total_weighted += current_stack * (time_point - last_time)
+                    current_stack = max(0, current_stack + delta)
+                    last_time = time_point
+                return total_weighted
         
         # Process all combat events
         for event in self.events:
@@ -795,14 +831,24 @@ class EVTCParser:
                 elif event.skillid == BoonID.STABILITY:
                     stability_events += 1
                 
-                # Buff applied to dst_agent - store (time, duration, stacks) for RECEIVED boons
+                # Buff applied to dst_agent - store (start, end, stacks) for RECEIVED boons
                 if event.dst_agent in player_stats:
+                    duration = int(max(0, event.value))
+                    if duration == 0:
+                        continue
+                    duration = min(duration, fight_duration_ms)
+                    raw_start_time = event.time
+                    raw_end_time = event.time + duration
+                    start_time = normalize_time(raw_start_time)
+                    end_time = normalize_time(raw_end_time)
+                    if end_time <= start_time:
+                        continue
                     if event.dst_agent not in active_boons:
                         active_boons[event.dst_agent] = {}
                     if event.skillid not in active_boons[event.dst_agent]:
                         active_boons[event.dst_agent][event.skillid] = []
-                    # Store (start_time, duration, stack_count) - is_shields is the stack count!
-                    active_boons[event.dst_agent][event.skillid].append((event.time, event.value, event.is_shields))
+                    # Store (start_ms, end_ms, stack_count) - is_shields is the stack count!
+                    active_boons[event.dst_agent][event.skillid].append((start_time, end_time, event.is_shields))
                 
                 # Track OUTGOING boons: src_agent gave boon to dst_agent
                 # Only track if both are allied players and the boon is relevant
@@ -881,109 +927,45 @@ class EVTCParser:
             
             # Stability
             if BoonID.STABILITY in player_boons:
-                stats.stability_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.STABILITY])
+                stats.stability_uptime_ms = merged_duration(player_boons[BoonID.STABILITY])
             
             # Quickness
             if BoonID.QUICKNESS in player_boons:
-                stats.quickness_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.QUICKNESS])
+                stats.quickness_uptime_ms = merged_duration(player_boons[BoonID.QUICKNESS])
             
             # Aegis
             if BoonID.AEGIS in player_boons:
-                stats.aegis_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.AEGIS])
+                stats.aegis_uptime_ms = merged_duration(player_boons[BoonID.AEGIS])
             
             # Protection
             if BoonID.PROTECTION in player_boons:
-                stats.protection_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.PROTECTION])
+                stats.protection_uptime_ms = merged_duration(player_boons[BoonID.PROTECTION])
             
             # Fury
             if BoonID.FURY in player_boons:
-                stats.fury_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.FURY])
+                stats.fury_uptime_ms = merged_duration(player_boons[BoonID.FURY])
             
             # Resistance
             if BoonID.RESISTANCE in player_boons:
-                stats.resistance_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.RESISTANCE])
+                stats.resistance_uptime_ms = merged_duration(player_boons[BoonID.RESISTANCE])
             
             # Alacrity
             if BoonID.ALACRITY in player_boons:
-                stats.alacrity_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.ALACRITY])
+                stats.alacrity_uptime_ms = merged_duration(player_boons[BoonID.ALACRITY])
             
             # Vigor
             if BoonID.VIGOR in player_boons:
-                stats.vigor_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.VIGOR])
+                stats.vigor_uptime_ms = merged_duration(player_boons[BoonID.VIGOR])
             
             # Superspeed
             if BoonID.SUPERSPEED in player_boons:
-                stats.superspeed_uptime_ms = sum(duration for _, duration, _ in player_boons[BoonID.SUPERSPEED])
+                stats.superspeed_uptime_ms = merged_duration(player_boons[BoonID.SUPERSPEED])
             
             # Might - calculate average stacks by tracking active buff instances
             if BoonID.MIGHT in player_boons:
-                # For stacking buffs, each application is a separate instance
-                # We need to track when instances start and end to count concurrent stacks
-                might_instances = player_boons[BoonID.MIGHT]
-                
-                # Create timeline of stack changes: (time, stack_delta)
-                timeline = []
-                for event_time, duration, _ in might_instances:
-                    timeline.append((event_time, +1))  # Stack added
-                    timeline.append((event_time + duration, -1))  # Stack removed
-                
-                # Sort by time
-                timeline.sort()
-                
-                # Calculate time-weighted average
-                total_stack_time = 0.0
-                current_stacks = 0
-                last_time = timeline[0][0] if timeline else 0
-                
-                for event_time, stack_delta in timeline:
-                    # Accumulate time with current stack count
-                    if event_time > last_time:
-                        total_stack_time += current_stacks * (event_time - last_time)
-                    
-                    # Update stack count
-                    current_stacks += stack_delta
-                    current_stacks = max(0, min(25, current_stacks))  # Cap at 0-25
-                    last_time = event_time
-                
-                # Store for service layer calculation
+                total_stack_time = merged_duration(player_boons[BoonID.MIGHT], weight_by_stack=True)
                 stats.might_total_stacks = int(total_stack_time)
                 stats.might_sample_count = 1  # Use 1 to indicate we have data
-        
-        # Helper to compute merged duration from intervals
-        def merged_duration(intervals: list[tuple[int, int, int]], *, weight_by_stack: bool = False) -> int:
-            if not intervals:
-                return 0
-            # Sort by start time
-            sorted_intervals = sorted(intervals, key=lambda x: x[0])
-            if not weight_by_stack:
-                simplified = [(start, end) for start, end, _ in sorted_intervals]
-                total = 0
-                cur_start, cur_end = simplified[0]
-                for start, end in simplified[1:]:
-                    if start <= cur_end:
-                        cur_end = max(cur_end, end)
-                    else:
-                        total += cur_end - cur_start
-                        cur_start, cur_end = start, end
-                total += cur_end - cur_start
-                return total
-            else:
-                # For Might (stack count matters), expand timeline with deltas weighted by stacks
-                timeline: list[tuple[int, int]] = []
-                for start, end, stack in sorted_intervals:
-                    stack = max(1, stack)
-                    timeline.append((start, stack))
-                    timeline.append((end, -stack))
-                timeline.sort()
-                total_weighted = 0
-                current_stack = 0
-                last_time = timeline[0][0]
-                for time_point, delta in timeline:
-                    if time_point > last_time and current_stack > 0:
-                        total_weighted += current_stack * (time_point - last_time)
-                    current_stack = max(0, current_stack + delta)
-                    last_time = time_point
-                return total_weighted
         
         # Calculate OUTGOING boon production from outgoing_boons tracking
         for player_addr, stats in player_stats.items():
