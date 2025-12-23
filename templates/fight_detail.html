@@ -209,7 +209,7 @@
                     <th class="px-16 py-12 font-semibold text-text-main">Role</th>
                     {% for column in allied_numeric_columns %}
                     {% set sort = allied_sort_links[column.key] %}
-                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular" data-type="number">
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular {% if column.key == 'cleanses' %}font-mono whitespace-nowrap{% endif %}" data-type="number">
                         <a href="{{ sort.url }}" class="inline-flex items-center gap-8 justify-end hover:text-text-main">
                             {{ column.label }}
                             <svg class="w-16 h-16 {% if sort.active %}text-gw2-gold{% else %}text-text-muted{% endif %}"
