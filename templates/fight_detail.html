@@ -213,7 +213,7 @@
                     </td>
                     {% for column in allied_boon_columns %}
                     {% set display_attr = column.display_attr if column.display_attr is defined else column.attr %}
-                    {% set boon_seconds = attribute(player, display_attr) %}
+                    {% set boon_seconds = player|attr(display_attr) %}
                     <td class="px-16 py-12 text-right font-tabular transition-opacity duration-150 {% if boon_seconds and boon_seconds > 0 %}text-text-main{% else %}text-text-muted{% endif %}"
                         :class="{ 'opacity-0 pointer-events-none hidden': !showBoons }">
                         {{ '{:,.1f}'.format((boon_seconds or 0)) }}
