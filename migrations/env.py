@@ -16,6 +16,11 @@ from app.db.models import *  # Import all models to ensure they're registered wi
 # access to the values within the .ini file in use.
 config = context.config
 
+# Allow overriding the DB URL via environment (e.g., SQLite locally, Postgres in prod)
+env_db_url = os.getenv("DATABASE_URL")
+if env_db_url:
+    config.set_main_option("sqlalchemy.url", env_db_url)
+
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:

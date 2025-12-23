@@ -20,8 +20,36 @@ BOON_COLUMNS = [
     {"key": "resistance", "label": "Resistance", "uptime_attr": "resistance_uptime", "out_attr": "resistance_out_ms"},
     {"key": "superspeed", "label": "Superspeed", "uptime_attr": "superspeed_uptime", "out_attr": "superspeed_out_ms"},
 ]
-BOON_COLUMN_MAP = {col["key"]: col for col in BOON_COLUMNS}
-DEFAULT_BOON_SORT = "quickness"
+ALLIED_NUMERIC_COLUMNS = [
+    {"key": "dps", "label": "DPS", "attr": "dps"},
+    {"key": "damage", "label": "Damage", "attr": "total_damage"},
+    {"key": "downs", "label": "Downs", "attr": "downs"},
+    {"key": "kills", "label": "Kills", "attr": "kills"},
+    {"key": "deaths", "label": "Deaths", "attr": "deaths"},
+    {"key": "damage_taken", "label": "Dmg Taken", "attr": "damage_taken"},
+    {"key": "quickness_uptime", "label": "Quick %", "attr": "quickness_uptime"},
+    {"key": "alacrity_uptime", "label": "Alac %", "attr": "alacrity_uptime"},
+    {"key": "might_uptime", "label": "Might", "attr": "might_uptime"},
+    {"key": "strips_out", "label": "Strips", "attr": "strips_out"},
+    {"key": "cleanses", "label": "Cleanses", "attr": "cleanses"},
+    {"key": "cc_total", "label": "CC", "attr": "cc_total"},
+]
+
+ALLIED_BOON_COLUMNS = [
+    {"key": "quickness_out", "label": "Quickness (s)", "attr": "quickness_out_ms", "divisor": 1000},
+    {"key": "protection_out", "label": "Protection (s)", "attr": "protection_out_ms", "divisor": 1000},
+    {"key": "vigor_out", "label": "Vigor (s)", "attr": "vigor_out_ms", "divisor": 1000},
+    {"key": "aegis_out", "label": "Aegis (s)", "attr": "aegis_out_ms", "divisor": 1000},
+    {"key": "stability_out", "label": "Stability (s)", "attr": "stab_out_ms", "divisor": 1000},
+    {"key": "resistance_out", "label": "Resistance (s)", "attr": "resistance_out_ms", "divisor": 1000},
+    {"key": "superspeed_out", "label": "Superspeed (s)", "attr": "superspeed_out_ms", "divisor": 1000},
+]
+
+ALLIED_SORT_COLUMNS = {
+    col["key"]: col for col in [*ALLIED_NUMERIC_COLUMNS, *ALLIED_BOON_COLUMNS]
+}
+DEFAULT_ALLIED_SORT = "dps"
+DEFAULT_ALLIED_DIR = "desc"
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -101,7 +129,9 @@ async def upload_log(
 async def view_fight(
     request: Request,
     fight_id: int,
-    boon_sort: str = Query(DEFAULT_BOON_SORT),
+    allied_sort: str = Query(DEFAULT_ALLIED_SORT),
+    allied_dir: str = Query(DEFAULT_ALLIED_DIR),
+    show_boons: int = Query(0),
     db: Session = Depends(get_db)
 ) -> HTMLResponse:
     """View detailed fight analysis."""
@@ -114,11 +144,8 @@ async def view_fight(
             status_code=404
         )
     
-    boon_sort_key = (boon_sort or DEFAULT_BOON_SORT).lower()
-    if boon_sort_key not in BOON_COLUMN_MAP:
-        boon_sort_key = DEFAULT_BOON_SORT
-
     allied_players = [p for p in fight.player_stats if p.account_name]
+    show_boon_columns = bool(show_boons)
 
     # Squad boon uptimes per subgroup
     group_totals: dict[int, dict] = defaultdict(lambda: {"count": 0, "boon_sums": defaultdict(float)})
@@ -155,41 +182,48 @@ async def view_fight(
         label = f"Group {group}" if group else "Group ?"
         squad_boon_uptimes.append(build_boon_row(label, group_totals[group], group))
 
-    # Boon generation ranking
-    def outgoing_value(player, column_key: str) -> float:
-        column = BOON_COLUMN_MAP[column_key]
-        return getattr(player, column["out_attr"], 0.0) or 0.0
+    allied_sort_key = (allied_sort or DEFAULT_ALLIED_SORT).lower()
+    if allied_sort_key not in ALLIED_SORT_COLUMNS:
+        allied_sort_key = DEFAULT_ALLIED_SORT
 
-    players_sorted = sorted(
+    allied_sort_dir = allied_dir.lower()
+    if allied_sort_dir not in {"asc", "desc"}:
+        allied_sort_dir = DEFAULT_ALLIED_DIR
+
+    def allied_value(player, column_key: str) -> float:
+        column = ALLIED_SORT_COLUMNS[column_key]
+        value = getattr(player, column["attr"], 0.0) or 0.0
+        return float(value)
+
+    allied_players_sorted = sorted(
         allied_players,
-        key=lambda player: outgoing_value(player, boon_sort_key),
-        reverse=True
+        key=lambda player: allied_value(player, allied_sort_key),
+        reverse=(allied_sort_dir == "desc"),
     )
 
-    boon_generation_rows = []
-    for player in players_sorted:
-        boons = {}
-        total = 0.0
-        for column in BOON_COLUMNS:
-            seconds = outgoing_value(player, column["key"]) / 1000.0
-            boons[column["key"]] = seconds
-            total += seconds
-        boon_generation_rows.append(
-            {
-                "character_name": player.character_name,
-                "account_name": player.account_name,
-                "spec_name": player.spec_name or player.profession or "Unknown",
-                "role": player.detected_role or "Unknown",
-                "subgroup": player.subgroup or 0,
-                "boons": boons,
-                "total": total,
-            }
+    def sort_link_for(column_key: str) -> dict:
+        column_active = allied_sort_key == column_key
+        next_dir = "asc" if column_active and allied_sort_dir == "desc" else "desc"
+        url = request.url.include_query_params(
+            allied_sort=column_key,
+            allied_dir=next_dir,
+            show_boons=int(show_boon_columns),
         )
+        return {
+            "url": str(url),
+            "active": column_active,
+            "direction": allied_sort_dir if column_active else "desc",
+        }
 
-    boon_sort_links = {
-        column["key"]: f"{request.url.path}?boon_sort={column['key']}"
-        for column in BOON_COLUMNS
+    allied_sort_links = {
+        column_key: sort_link_for(column_key) for column_key in ALLIED_SORT_COLUMNS.keys()
     }
+
+    boon_toggle_url = request.url.include_query_params(
+        show_boons=int(not show_boon_columns),
+        allied_sort=allied_sort_key,
+        allied_dir=allied_sort_dir,
+    )
 
     return templates.TemplateResponse(
         "fight_detail.html",
@@ -199,8 +233,13 @@ async def view_fight(
             "fight": fight,
             "boon_columns": BOON_COLUMNS,
             "squad_boon_uptimes": squad_boon_uptimes,
-            "boon_generation_rows": boon_generation_rows,
-            "boon_sort": boon_sort_key,
-            "boon_sort_links": boon_sort_links,
+            "allied_players": allied_players_sorted,
+            "allied_numeric_columns": ALLIED_NUMERIC_COLUMNS,
+            "allied_boon_columns": ALLIED_BOON_COLUMNS,
+            "allied_sort": allied_sort_key,
+            "allied_sort_dir": allied_sort_dir,
+            "allied_sort_links": allied_sort_links,
+            "show_boon_columns": show_boon_columns,
+            "boon_toggle_url": str(boon_toggle_url),
         }
     )

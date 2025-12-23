@@ -23,6 +23,10 @@ def recalculate_all_roles():
         
         print(f"📊 Recalculating roles for {total} player records...")
         print()
+
+        if total == 0:
+            print("ℹ️  No player stats to recalculate. Exiting.")
+            return
         
         role_changes = {
             "unchanged": 0,

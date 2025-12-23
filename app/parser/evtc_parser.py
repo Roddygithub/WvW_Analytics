@@ -654,8 +654,35 @@ class EVTCParser:
         # Track active boons per player (received): {player_addr: {buff_id: [(start_time, duration, stack_info), ...]}}
         active_boons: dict[int, dict[int, list[tuple[int, int]]]] = {}
         
-        # Track outgoing boons per player (given): {src_player_addr: {buff_id: [(dst_player, duration, stacks), ...]}}
-        outgoing_boons: dict[int, dict[int, list[tuple[int, int, int]]]] = {}
+                # Track outgoing boons per player (given):
+        # {src_player: {buff_id: {dst_player: [(start_ms, end_ms, stack_count)]}}}
+        outgoing_boons: dict[int, dict[int, dict[int, list[tuple[int, int, int]]]]] = {}
+        
+        # Debug helpers for suspect boon math
+        DEBUG_BOON_PLAYERS = {"Fineeeh", "Fyrënstär", "Stikko Ze Rallybot"}
+        DEBUG_BOON_IDS = {BoonID.AEGIS}
+        debug_boon_totals: dict[str, dict[int, int]] = {}
+        
+        # Helpers to cap/validate durations
+        squad_start = self.get_combat_start_time() or (self.events[0].time if self.events else 0)
+        squad_end = self.get_combat_end_time() or (self.events[-1].time if self.events else squad_start)
+        fight_duration_ms = max(1, squad_end - squad_start)
+
+        logger.debug(
+            "Fight timing: raw_start=%d raw_end=%d duration_ms=%d file=%s",
+            squad_start,
+            squad_end,
+            fight_duration_ms,
+            getattr(self.file_path, "name", "N/A"),
+        )
+
+        def normalize_time(timestamp: int) -> int:
+            """Convert raw EVTC timestamp into fight-relative milliseconds."""
+            if timestamp <= squad_start:
+                return 0
+            if timestamp >= squad_end:
+                return fight_duration_ms
+            return timestamp - squad_start
         
         # Process all combat events
         for event in self.events:
@@ -745,7 +772,7 @@ class EVTCParser:
                             stats.kills += 1
             
             # Buff apply events (buff != 0, buff_dmg == 0, value > 0)
-            elif event.buff != 0 and event.buff_dmg == 0 and event.value > 0:
+            elif event.buff != 0 and event.buff_dmg == 0 and event.value >= 0:
                 buff_apply_events += 1
                 unique_buff_ids.add(event.skillid)
                 
@@ -779,18 +806,65 @@ class EVTCParser:
                 
                 # Track OUTGOING boons: src_agent gave boon to dst_agent
                 # Only track if both are allied players and the boon is relevant
-                if (event.src_agent in player_stats and event.dst_agent in player_stats and
-                    player_stats[event.src_agent].is_ally and player_stats[event.dst_agent].is_ally):
+                if (
+                    event.src_agent in player_stats
+                    and event.dst_agent in player_stats
+                    and player_stats[event.src_agent].is_ally
+                    and player_stats[event.dst_agent].is_ally
+                ):
+                    src = event.src_agent
+                    buff_id = event.skillid
+                    dst = event.dst_agent
+                    duration = int(max(0, event.value))
+                    if duration == 0:
+                        continue
                     
-                    if event.src_agent not in outgoing_boons:
-                        outgoing_boons[event.src_agent] = {}
-                    if event.skillid not in outgoing_boons[event.src_agent]:
-                        outgoing_boons[event.src_agent][event.skillid] = []
+                    # Clamp duration to fight length to avoid sentinel values (~4e9)
+                    duration = min(duration, fight_duration_ms)
                     
-                    # Store (dst_player, duration, stack_count)
-                    # For Might, is_shields is the stack count; for others it's 1
-                    stack_count = event.is_shields if event.skillid == BoonID.MIGHT else 1
-                    outgoing_boons[event.src_agent][event.skillid].append((event.dst_agent, event.value, stack_count))
+                    if src not in outgoing_boons:
+                        outgoing_boons[src] = {}
+                    if buff_id not in outgoing_boons[src]:
+                        outgoing_boons[src][buff_id] = {}
+                    if dst not in outgoing_boons[src][buff_id]:
+                        outgoing_boons[src][buff_id][dst] = []
+                    
+                    raw_start_time = event.time
+                    raw_end_time = event.time + duration
+
+                    # Normalize to fight-relative timeline and clamp to [0, fight_duration]
+                    start_time = normalize_time(raw_start_time)
+                    end_time = normalize_time(raw_end_time)
+                    if end_time <= start_time:
+                        continue
+                    
+                    stack_count = (
+                        event.is_shields if buff_id == BoonID.MIGHT and event.is_shields > 0 else 1
+                    )
+                    outgoing_boons[src][buff_id][dst].append((start_time, end_time, stack_count))
+                    
+                    src_stats = player_stats[src]
+                    if (
+                        src_stats.character_name in DEBUG_BOON_PLAYERS
+                        and buff_id in DEBUG_BOON_IDS
+                    ):
+                        debug_totals = debug_boon_totals.setdefault(src_stats.character_name, {})
+                        prev_total = debug_totals.get(buff_id, 0)
+                        interval_duration = end_time - start_time
+                        debug_totals[buff_id] = prev_total + interval_duration
+                        logger.debug(
+                            (
+                                "Aegis debug: player=%s dst=%s raw_time=%d rel_start=%d "
+                                "rel_end=%d interval_ms=%d cumulative_ms=%d"
+                            ),
+                            src_stats.character_name,
+                            player_stats[dst].character_name,
+                            event.time,
+                            start_time,
+                            end_time,
+                            interval_duration,
+                            debug_totals[buff_id],
+                        )
             
             # Condition damage events (buff != 0, buff_dmg > 0)
             elif event.buff != 0 and event.buff_dmg > 0:
@@ -845,11 +919,11 @@ class EVTCParser:
             if BoonID.MIGHT in player_boons:
                 # For stacking buffs, each application is a separate instance
                 # We need to track when instances start and end to count concurrent stacks
-                might_events = player_boons[BoonID.MIGHT]
+                might_instances = player_boons[BoonID.MIGHT]
                 
                 # Create timeline of stack changes: (time, stack_delta)
                 timeline = []
-                for event_time, duration, _ in might_events:
+                for event_time, duration, _ in might_instances:
                     timeline.append((event_time, +1))  # Stack added
                     timeline.append((event_time + duration, -1))  # Stack removed
                 
@@ -875,6 +949,42 @@ class EVTCParser:
                 stats.might_total_stacks = int(total_stack_time)
                 stats.might_sample_count = 1  # Use 1 to indicate we have data
         
+        # Helper to compute merged duration from intervals
+        def merged_duration(intervals: list[tuple[int, int, int]], *, weight_by_stack: bool = False) -> int:
+            if not intervals:
+                return 0
+            # Sort by start time
+            sorted_intervals = sorted(intervals, key=lambda x: x[0])
+            if not weight_by_stack:
+                simplified = [(start, end) for start, end, _ in sorted_intervals]
+                total = 0
+                cur_start, cur_end = simplified[0]
+                for start, end in simplified[1:]:
+                    if start <= cur_end:
+                        cur_end = max(cur_end, end)
+                    else:
+                        total += cur_end - cur_start
+                        cur_start, cur_end = start, end
+                total += cur_end - cur_start
+                return total
+            else:
+                # For Might (stack count matters), expand timeline with deltas weighted by stacks
+                timeline: list[tuple[int, int]] = []
+                for start, end, stack in sorted_intervals:
+                    stack = max(1, stack)
+                    timeline.append((start, stack))
+                    timeline.append((end, -stack))
+                timeline.sort()
+                total_weighted = 0
+                current_stack = 0
+                last_time = timeline[0][0]
+                for time_point, delta in timeline:
+                    if time_point > last_time and current_stack > 0:
+                        total_weighted += current_stack * (time_point - last_time)
+                    current_stack = max(0, current_stack + delta)
+                    last_time = time_point
+                return total_weighted
+        
         # Calculate OUTGOING boon production from outgoing_boons tracking
         for player_addr, stats in player_stats.items():
             if player_addr not in outgoing_boons:
@@ -882,49 +992,36 @@ class EVTCParser:
             
             player_outgoing = outgoing_boons[player_addr]
             
-            # Stability outgoing
-            if BoonID.STABILITY in player_outgoing:
-                stats.stab_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.STABILITY])
+            def accumulate_boon(buff_id: int, *, weight_by_stack: bool = False) -> int:
+                if buff_id not in player_outgoing:
+                    return 0
+                total = 0
+                for intervals in player_outgoing[buff_id].values():
+                    total += merged_duration(intervals, weight_by_stack=weight_by_stack)
+                return total
             
-            # Aegis outgoing
-            if BoonID.AEGIS in player_outgoing:
-                stats.aegis_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.AEGIS])
-            
-            # Protection outgoing
-            if BoonID.PROTECTION in player_outgoing:
-                stats.protection_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.PROTECTION])
-            
-            # Quickness outgoing
-            if BoonID.QUICKNESS in player_outgoing:
-                stats.quickness_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.QUICKNESS])
-            
-            # Alacrity outgoing
-            if BoonID.ALACRITY in player_outgoing:
-                stats.alacrity_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.ALACRITY])
-            
-            # Resistance outgoing
-            if BoonID.RESISTANCE in player_outgoing:
-                stats.resistance_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.RESISTANCE])
-            
-            # Fury outgoing
-            if BoonID.FURY in player_outgoing:
-                stats.fury_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.FURY])
-            
-            # Regeneration outgoing
-            if BoonID.REGENERATION in player_outgoing:
-                stats.regeneration_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.REGENERATION])
-            
-            # Might outgoing - sum of (stacks * duration) for all applications
-            if BoonID.MIGHT in player_outgoing:
-                stats.might_out_stacks = sum(duration * stacks for _, duration, stacks in player_outgoing[BoonID.MIGHT])
-            
-            # Vigor outgoing
-            if BoonID.VIGOR in player_outgoing:
-                stats.vigor_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.VIGOR])
-            
-            # Superspeed outgoing
-            if BoonID.SUPERSPEED in player_outgoing:
-                stats.superspeed_out_ms = sum(duration for _, duration, _ in player_outgoing[BoonID.SUPERSPEED])
+            stats.stab_out_ms = accumulate_boon(BoonID.STABILITY)
+            stats.aegis_out_ms = accumulate_boon(BoonID.AEGIS)
+            stats.protection_out_ms = accumulate_boon(BoonID.PROTECTION)
+            stats.quickness_out_ms = accumulate_boon(BoonID.QUICKNESS)
+            stats.alacrity_out_ms = accumulate_boon(BoonID.ALACRITY)
+            stats.resistance_out_ms = accumulate_boon(BoonID.RESISTANCE)
+            stats.fury_out_ms = accumulate_boon(BoonID.FURY)
+            stats.regeneration_out_ms = accumulate_boon(BoonID.REGENERATION)
+            stats.vigor_out_ms = accumulate_boon(BoonID.VIGOR)
+            stats.superspeed_out_ms = accumulate_boon(BoonID.SUPERSPEED)
+            stats.might_out_stacks = accumulate_boon(BoonID.MIGHT, weight_by_stack=True)
+        
+        if debug_boon_totals:
+            for player_name, boon_totals in debug_boon_totals.items():
+                for boon_id, total_ms in boon_totals.items():
+                    logger.debug(
+                        "Outgoing boon summary: player=%s boon=%s total_ms=%d (fight_duration_ms=%d)",
+                        player_name,
+                        BoonID(boon_id).name if boon_id in BoonID.__members__.values() else boon_id,
+                        total_ms,
+                        fight_duration_ms,
+                    )
         
         logger.info(
             "EVTC debug for %s: events=%d, direct=%d, ally_to_enemy=%d, changedown=%d, changedead=%d, res_downed=%d, res_killingblow=%d",
