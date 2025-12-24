@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
+import anyio
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
@@ -12,7 +13,6 @@ from app.db.models import Fight, FightContext, FightResult, PlayerStats
 from app.integrations.dps_report import (
     DPSReportError,
     ensure_log_imported,
-    ensure_log_imported_sync,
 )
 from app.services.dps_mapping import map_dps_json_to_models
 
@@ -99,7 +99,7 @@ def process_log_file_sync(
     # dps.report path (canonical)
     if settings.DPS_REPORT_ENABLED:
         try:
-            json_data, permalink, json_path = ensure_log_imported_sync(file_path)
+            json_data, permalink, json_path = ensure_log_imported(file_path)
             mapped = map_dps_json_to_models(json_data)
             fight = mapped.fight
             fight.evtc_filename = file_path.name
