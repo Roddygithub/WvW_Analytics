@@ -68,14 +68,17 @@ def _find_buff_entries(player: Dict[str, Any], keys: list[str], buff_id: int) ->
     return []
 
 
-def _uptime_from_buff_data(player: Dict[str, Any], buff_id: int) -> float:
+def _uptime_from_buff_data(player: Dict[str, Any], buff_id: int, duration_ms: Optional[int]) -> float:
     """
     Extract uptime% for a given buff id from EI player's buffUptimes.
     Falls back to buffUptimesActive (per phase) if needed.
     """
     entries = _find_buff_entries(player, ["buffUptimes", "buffUptimesActive"], buff_id)
     if entries:
-        return float(entries[0].get("uptime", 0.0) or 0.0)
+        uptime_ms = float(entries[0].get("uptime", 0.0) or 0.0)
+        if duration_ms and duration_ms > 0:
+            return min(100.0, (uptime_ms / duration_ms) * 100.0)
+        return uptime_ms
     return 0.0
 
 
@@ -155,7 +158,7 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
         barrier_out = int(_safe_get(support, "barrier", 0))
 
         # Uptime percentages
-        uptimes = {name: _uptime_from_buff_data(player, buff_id) for name, buff_id in BOON_IDS.items()}
+        uptimes = {name: _uptime_from_buff_data(player, buff_id, duration_ms) for name, buff_id in BOON_IDS.items()}
 
         # Outgoing boon production (ms) if available
         outgoing_ms = {name: _out_ms_from_generations(player, buff_id) for name, buff_id in BOON_IDS.items()}
