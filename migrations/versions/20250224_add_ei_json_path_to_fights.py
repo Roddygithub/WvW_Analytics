@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "20250224_add_ei_json_path_to_fights"
-down_revision = "20241224_add_regen_swiftness_stealth_columns"
+down_revision = "20241224_add_regen_swiftness_stealth"
 branch_labels = None
 depends_on = None
 

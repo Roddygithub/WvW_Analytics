@@ -43,6 +43,8 @@ class Fight(Base):
     
     map_id = Column(Integer, nullable=True)
     ei_json_path = Column(String, nullable=True)
+    dps_permalink = Column(String, nullable=True)
+    dps_json_path = Column(String, nullable=True)
     
     player_stats = relationship("PlayerStats", back_populates="fight", cascade="all, delete-orphan")
 

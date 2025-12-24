@@ -9,8 +9,12 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import Fight, FightContext, FightResult, PlayerStats
-from app.integrations.elite_insights import get_ei_client, EliteInsightsError
-from app.services.ei_mapping import map_ei_json_to_models
+from app.integrations.dps_report import (
+    DPSReportError,
+    ensure_log_imported,
+    ensure_log_imported_sync,
+)
+from app.services.dps_mapping import map_dps_json_to_models
 
 
 UPLOAD_DIR = Path("uploads")
@@ -80,30 +84,28 @@ def process_log_file_sync(
     db: Session
 ) -> tuple[Optional[Fight], Optional[str]]:
     """
-    Process uploaded log file and extract metrics (EI-first).
+    Process uploaded log file and extract metrics (dps.report first).
     
     Returns:
         (fight_record, error_message)
     """
-    from app.parser.evtc_parser import EVTCParseError  # legacy
+    from app.parser.evtc_parser import EVTCParseError  # legacy fallback only
     from app.services.roles_service import detect_player_role
 
     is_valid, error = validate_evtc_file(file_path)
     if not is_valid:
         return None, error
 
-    # EI path
-    if settings.EI_ENABLED:
+    # dps.report path (canonical)
+    if settings.DPS_REPORT_ENABLED:
         try:
-            ei_client = get_ei_client()
-            ei_json, ei_json_path = ei_client.run(file_path)
-
-            # Map EI JSON to models (unsaved)
-            mapped = map_ei_json_to_models(ei_json)
+            json_data, permalink, json_path = ensure_log_imported_sync(file_path)
+            mapped = map_dps_json_to_models(json_data)
             fight = mapped.fight
             fight.evtc_filename = file_path.name
             fight.upload_timestamp = datetime.utcnow()
-            fight.ei_json_path = str(ei_json_path)
+            fight.dps_permalink = permalink
+            fight.dps_json_path = str(json_path)
 
             db.add(fight)
             db.flush()  # get fight.id
@@ -117,12 +119,12 @@ def process_log_file_sync(
             db.commit()
             db.refresh(fight)
             return fight, None
-        except EliteInsightsError as e:
-            return None, f"Elite Insights error: {str(e)}"
+        except DPSReportError as e:
+            return None, f"dps.report error: {str(e)}"
         except Exception as e:
-            return None, f"Failed to process log via EI: {str(e)}"
+            return None, f"Failed to process log via dps.report: {str(e)}"
 
-    # Legacy fallback (deprecated)
+    # Legacy fallback (deprecated) using EVTCParser only if explicitly enabled
     try:
         from app.parser.evtc_parser import EVTCParser
 
@@ -205,7 +207,6 @@ def process_log_file_sync(
                 
                 # Might: average stacks (time-weighted)
                 if stats.might_sample_count > 0 and duration_ms > 0:
-                    # might_total_stacks is already stack*time in ms, divide by duration
                     might_avg = min(25.0, stats.might_total_stacks / duration_ms)
             
             player_stat = PlayerStats(
@@ -254,7 +255,6 @@ def process_log_file_sync(
             )
             db.add(player_stat)
             
-            # Detect and assign role after stats are set
             primary_role, role_tags = detect_player_role(player_stat)
             player_stat.detected_role = primary_role
         
