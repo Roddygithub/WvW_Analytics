@@ -34,27 +34,51 @@ def _parse_duration_ms(json_data: Dict[str, Any]) -> Optional[int]:
     """
     Extract fight duration in milliseconds from common EI/dps.report fields.
     """
-    # Some EI exports include a numeric duration in ms
-    for key in ("duration", "durationMS", "fightDurationMS"):
+    # Numeric fields in ms
+    for key in ("fightDurationMS", "durationMS", "duration"):
         val = json_data.get(key)
         if isinstance(val, (int, float)) and val > 0:
             return int(val)
 
-    # EI string format like "1m 33s" or "02:15"
-    fight_duration = json_data.get("fightDuration")
-    if isinstance(fight_duration, str):
-        # Pattern 1: "1m 33s"
-        m = re.match(r"(?:(\d+)\s*m)?\s*(\d+)\s*s", fight_duration.strip())
+    def _parse_time_str(s: str) -> Optional[int]:
+        s = s.strip()
+        # Pattern 1: "1m 33s" or "01m33s"
+        m = re.match(r"(?:(\d+)\s*m)?\s*(\d+)\s*s", s)
         if m:
             minutes = int(m.group(1) or 0)
             seconds = int(m.group(2))
             return (minutes * 60 + seconds) * 1000
         # Pattern 2: "MM:SS"
-        m = re.match(r"(\d+):(\d{2})", fight_duration.strip())
+        m = re.match(r"(\d+):(\d{2})", s)
         if m:
             minutes = int(m.group(1))
             seconds = int(m.group(2))
             return (minutes * 60 + seconds) * 1000
+        return None
+
+    # String durations
+    for key in ("fightDuration", "duration"):
+        val = json_data.get(key)
+        if isinstance(val, str):
+            parsed = _parse_time_str(val)
+            if parsed:
+                return parsed
+
+    # Fallback: if phases exist, take the longest duration field we can find
+    phases = json_data.get("phases") or []
+    duration_candidates: list[int] = []
+    for phase in phases:
+        for key in ("duration", "durationMS", "durationMs"):
+            val = phase.get(key)
+            if isinstance(val, (int, float)) and val > 0:
+                duration_candidates.append(int(val))
+            elif isinstance(val, str):
+                parsed = _parse_time_str(val)
+                if parsed:
+                    duration_candidates.append(parsed)
+    if duration_candidates:
+        return max(duration_candidates)
+
     return None
 
 
