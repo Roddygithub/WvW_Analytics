@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Optional
+import re
 
 from app.db.models import Fight, FightContext, FightResult, PlayerStats
 
@@ -27,6 +28,34 @@ BOON_IDS = {
 
 def _safe_get(data: Dict[str, Any], key: str, default: Any = 0) -> Any:
     return data.get(key, default)
+
+
+def _parse_duration_ms(json_data: Dict[str, Any]) -> Optional[int]:
+    """
+    Extract fight duration in milliseconds from common EI/dps.report fields.
+    """
+    # Some EI exports include a numeric duration in ms
+    for key in ("duration", "durationMS", "fightDurationMS"):
+        val = json_data.get(key)
+        if isinstance(val, (int, float)) and val > 0:
+            return int(val)
+
+    # EI string format like "1m 33s" or "02:15"
+    fight_duration = json_data.get("fightDuration")
+    if isinstance(fight_duration, str):
+        # Pattern 1: "1m 33s"
+        m = re.match(r"(?:(\d+)\s*m)?\s*(\d+)\s*s", fight_duration.strip())
+        if m:
+            minutes = int(m.group(1) or 0)
+            seconds = int(m.group(2))
+            return (minutes * 60 + seconds) * 1000
+        # Pattern 2: "MM:SS"
+        m = re.match(r"(\d+):(\d{2})", fight_duration.strip())
+        if m:
+            minutes = int(m.group(1))
+            seconds = int(m.group(2))
+            return (minutes * 60 + seconds) * 1000
+    return None
 
 
 def _find_buff_entries(player: Dict[str, Any], keys: list[str], buff_id: int) -> list[Dict[str, Any]]:
@@ -73,10 +102,12 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
     """
     Map dps.report EI JSON into Fight + PlayerStats ORM models (unsaved).
     """
-    duration_ms = int(json_data.get("fightDuration", 0))
+    duration_ms = _parse_duration_ms(json_data)
     result = FightResult.UNKNOWN
     if str(json_data.get("success", "")).lower() in {"true", "1"}:
         result = FightResult.VICTORY
+    elif str(json_data.get("success", "")).lower() in {"false", "0"}:
+        result = FightResult.DEFEAT
 
     fight = Fight(
         evtc_filename=json_data.get("eiEncounterID", "unknown.evtc"),
@@ -90,9 +121,10 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
     )
 
     player_stats: List[PlayerStats] = []
-    players = json_data.get("players", [])
+    allies = json_data.get("players", []) or []
+    enemies = json_data.get("enemyPlayers", []) or []
 
-    for player in players:
+    def _build_player_stats(player: Dict[str, Any], is_ally: bool) -> PlayerStats:
         subgroup = int(player.get("group", 0))
         account = player.get("account", None)
         character = player.get("name", "Unknown")
@@ -104,9 +136,11 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
         support_all = player.get("supportAll", [])
         defense_all = player.get("defenseAll", [])
 
-        dps_total = dps_all[0] if dps_all else {}
-        support = support_all[0] if support_all else {}
-        defense = defense_all[0] if defense_all else {}
+        stats_all = player.get("statsAll", [])
+
+        dps_total = dps_all[0] if dps_all else (stats_all[0] if stats_all else {})
+        support = support_all[0] if support_all else (stats_all[0] if stats_all else {})
+        defense = defense_all[0] if defense_all else (stats_all[0] if stats_all else {})
 
         total_damage = int(_safe_get(dps_total, "damage", 0))
         dps = float(_safe_get(dps_total, "dps", 0.0))
@@ -114,9 +148,9 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
         deaths = int(_safe_get(defense, "dead", 0))
         kills = int(_safe_get(dps_total, "kills", 0))
         damage_taken = int(_safe_get(defense, "damageTaken", 0))
-        cleanses = int(_safe_get(support, "condiCleanse", 0))
-        strips_out = int(_safe_get(support, "boonStrips", 0))
-        cc_total = int(_safe_get(dps_total, "breakbarDamage", 0))
+        cleanses = int(_safe_get(support, "condiCleanse", _safe_get(defense, "condiCleanse", 0)))
+        strips_out = int(_safe_get(support, "boonStrips", _safe_get(defense, "boonStrips", 0)))
+        cc_total = int(_safe_get(dps_total, "breakbarDamage", _safe_get(defense, "breakbarDamage", 0)))
         healing_out = int(_safe_get(support, "healing", 0))
         barrier_out = int(_safe_get(support, "barrier", 0))
 
@@ -129,14 +163,18 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
         # EI might uptime is percent; convert to average stacks (0-25)
         might_avg_stacks = (uptimes["might"] / 100.0) * 25.0 if uptimes["might"] else 0.0
 
-        ps = PlayerStats(
+        # For enemies, keep subgroup=0 to avoid showing in allied subgroup aggregation
+        subgroup_value = subgroup if is_ally else 0
+        account_value = account if is_ally else None
+
+        return PlayerStats(
             fight_id=None,  # filled when persisted
             character_name=character,
-            account_name=account,
+            account_name=account_value,
             profession=str(prof) if prof is not None else None,
             elite_spec=str(elite) if elite is not None else None,
             spec_name=spec_name or None,
-            subgroup=subgroup,
+            subgroup=subgroup_value,
             total_damage=total_damage,
             dps=dps,
             downs=downs,
@@ -175,9 +213,18 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
             vigor_out_ms=outgoing_ms["vigor"],
             superspeed_out_ms=outgoing_ms["superspeed"],
         )
+
+    # Allies
+    for player in allies:
+        ps = _build_player_stats(player, is_ally=True)
         player_stats.append(ps)
 
-    fight.ally_count = len(player_stats)
-    fight.enemy_count = 0
+    # Enemies (optional in EI JSON)
+    for player in enemies:
+        ps = _build_player_stats(player, is_ally=False)
+        player_stats.append(ps)
+
+    fight.ally_count = len(allies)
+    fight.enemy_count = len(enemies)
 
     return MappedFight(fight=fight, player_stats=player_stats)
