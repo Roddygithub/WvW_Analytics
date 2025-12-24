@@ -29,29 +29,37 @@ def _safe_get(data: Dict[str, Any], key: str, default: Any = 0) -> Any:
     return data.get(key, default)
 
 
+def _find_buff_entries(player: Dict[str, Any], keys: list[str], buff_id: int) -> list[Dict[str, Any]]:
+    for key in keys:
+        for entry in player.get(key, []) or []:
+            if entry.get("id") == buff_id:
+                data = entry.get("buffData", [])
+                if data:
+                    return data
+    return []
+
+
 def _uptime_from_buff_data(player: Dict[str, Any], buff_id: int) -> float:
     """
     Extract uptime% for a given buff id from EI player's buffUptimes.
+    Falls back to buffUptimesActive (per phase) if needed.
     """
-    for entry in player.get("buffUptimes", []):
-        if entry.get("id") == buff_id:
-            buff_data = entry.get("buffData", [])
-            if buff_data:
-                return float(buff_data[0].get("uptime", 0.0))
+    entries = _find_buff_entries(player, ["buffUptimes", "buffUptimesActive"], buff_id)
+    if entries:
+        return float(entries[0].get("uptime", 0.0) or 0.0)
     return 0.0
 
 
 def _out_ms_from_generations(player: Dict[str, Any], buff_id: int) -> int:
     """
     Extract outgoing boon generation (milliseconds) if present in EI buff generation tables.
+    Falls back to buffGenerationsActive.
     """
-    for entry in player.get("buffGenerations", []):
-        if entry.get("id") == buff_id:
-            buff_data = entry.get("buffData", [])
-            if buff_data:
-                generated = buff_data[0].get("generation", 0)
-                if generated:
-                    return int(generated)
+    entries = _find_buff_entries(player, ["buffGenerations", "buffGenerationsActive"], buff_id)
+    if entries:
+        generated = entries[0].get("generation", 0)
+        if generated:
+            return int(generated)
     return 0
 
 
