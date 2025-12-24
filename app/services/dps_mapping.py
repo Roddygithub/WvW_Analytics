@@ -163,9 +163,6 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
         # Outgoing boon production (ms) if available
         outgoing_ms = {name: _out_ms_from_generations(player, buff_id) for name, buff_id in BOON_IDS.items()}
 
-        # EI might uptime is percent; convert to average stacks (0-25)
-        might_avg_stacks = (uptimes["might"] / 100.0) * 25.0 if uptimes["might"] else 0.0
-
         # For enemies, keep subgroup=0 to avoid showing in allied subgroup aggregation
         subgroup_value = subgroup if is_ally else 0
         account_value = account if is_ally else None
@@ -203,7 +200,8 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
             swiftness_uptime=uptimes["swiftness"],
             stealth_uptime=uptimes["stealth"],
             resolution_uptime=uptimes["resolution"],
-            might_uptime=might_avg_stacks,
+            # Might uptime: keep EI percentage (0-100)
+            might_uptime=uptimes["might"],
             stab_out_ms=outgoing_ms["stability"],
             aegis_out_ms=outgoing_ms["aegis"],
             protection_out_ms=outgoing_ms["protection"],

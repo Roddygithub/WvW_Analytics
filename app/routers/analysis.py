@@ -250,17 +250,17 @@ async def view_fight(
         subgroup = player.subgroup or 0
         group_entry = group_totals[subgroup]
         group_entry["count"] += 1
-        squad_total["count"] += 1
+        # Exclude non-squad (subgroup 0) from "Squad Average" like EI
+        if subgroup and subgroup > 0:
+            squad_total["count"] += 1
 
         for column in BOON_COLUMNS:
             value = getattr(player, column["uptime_attr"], 0.0) or 0.0
-            # Might is stored as average stacks (0-25). Convert to percent of 25 stacks.
-            if column["key"] == "might":
-                value = (float(value) / 25.0) * 100.0
             normalized_percent = min(100.0, max(0.0, float(value)))
             active_ms = (normalized_percent / 100.0) * fight_duration_ms if fight_duration_ms else 0.0
             group_entry["boon_active_ms"][column["key"]] += active_ms
-            squad_total["boon_active_ms"][column["key"]] += active_ms
+            if subgroup and subgroup > 0:
+                squad_total["boon_active_ms"][column["key"]] += active_ms
 
     def build_boon_row(label: str, data: dict, group_number: int | None = None) -> dict:
         boons = {}
