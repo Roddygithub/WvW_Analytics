@@ -233,7 +233,11 @@ async def view_fight(
             status_code=404
         )
     
-    allied_players = [p for p in fight.player_stats if p.account_name]
+    # Include allied players. In WvW logs, enemies typically have subgroup=0 and no account name.
+    # Some allies may have missing account names; include them if subgroup > 0.
+    allied_players = [
+        p for p in fight.player_stats if p.account_name or (p.subgroup and p.subgroup > 0)
+    ]
     show_boon_columns = bool(show_boons)
 
     fight_duration_ms = fight.duration_ms or 0
@@ -249,8 +253,11 @@ async def view_fight(
         squad_total["count"] += 1
 
         for column in BOON_COLUMNS:
-            uptime_percent = getattr(player, column["uptime_attr"], 0.0) or 0.0
-            normalized_percent = min(100.0, max(0.0, float(uptime_percent)))
+            value = getattr(player, column["uptime_attr"], 0.0) or 0.0
+            # Might is stored as average stacks (0-25). Convert to percent of 25 stacks.
+            if column["key"] == "might":
+                value = (float(value) / 25.0) * 100.0
+            normalized_percent = min(100.0, max(0.0, float(value)))
             active_ms = (normalized_percent / 100.0) * fight_duration_ms if fight_duration_ms else 0.0
             group_entry["boon_active_ms"][column["key"]] += active_ms
             squad_total["boon_active_ms"][column["key"]] += active_ms

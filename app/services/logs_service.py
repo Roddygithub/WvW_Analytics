@@ -7,7 +7,10 @@ from datetime import datetime
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db.models import Fight, FightContext, FightResult, PlayerStats
+from app.integrations.elite_insights import get_ei_client, EliteInsightsError
+from app.services.ei_mapping import map_ei_json_to_models
 
 
 UPLOAD_DIR = Path("uploads")
@@ -77,19 +80,52 @@ def process_log_file_sync(
     db: Session
 ) -> tuple[Optional[Fight], Optional[str]]:
     """
-    Process uploaded log file and extract basic metrics (synchronous version).
+    Process uploaded log file and extract metrics (EI-first).
     
     Returns:
         (fight_record, error_message)
     """
-    from app.parser.evtc_parser import EVTCParser, EVTCParseError
+    from app.parser.evtc_parser import EVTCParseError  # legacy
     from app.services.roles_service import detect_player_role
-    
+
     is_valid, error = validate_evtc_file(file_path)
     if not is_valid:
         return None, error
-    
+
+    # EI path
+    if settings.EI_ENABLED:
+        try:
+            ei_client = get_ei_client()
+            ei_json, ei_json_path = ei_client.run(file_path)
+
+            # Map EI JSON to models (unsaved)
+            mapped = map_ei_json_to_models(ei_json)
+            fight = mapped.fight
+            fight.evtc_filename = file_path.name
+            fight.upload_timestamp = datetime.utcnow()
+            fight.ei_json_path = str(ei_json_path)
+
+            db.add(fight)
+            db.flush()  # get fight.id
+
+            for ps in mapped.player_stats:
+                ps.fight_id = fight.id
+                db.add(ps)
+                primary_role, role_tags = detect_player_role(ps)
+                ps.detected_role = primary_role
+
+            db.commit()
+            db.refresh(fight)
+            return fight, None
+        except EliteInsightsError as e:
+            return None, f"Elite Insights error: {str(e)}"
+        except Exception as e:
+            return None, f"Failed to process log via EI: {str(e)}"
+
+    # Legacy fallback (deprecated)
     try:
+        from app.parser.evtc_parser import EVTCParser
+
         parser = EVTCParser(file_path)
         parser.parse()
         

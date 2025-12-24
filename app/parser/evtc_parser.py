@@ -2,6 +2,7 @@ import struct
 import zlib
 import zipfile
 import logging
+from collections import defaultdict
 from io import BytesIO
 from pathlib import Path
 from typing import Optional, BinaryIO
@@ -293,6 +294,7 @@ class PlayerStatsData:
     fury_uptime_ms: int = 0
     resistance_uptime_ms: int = 0
     alacrity_uptime_ms: int = 0
+    resolution_uptime_ms: int = 0
     regeneration_uptime_ms: int = 0
     might_total_stacks: int = 0  # Sum of all might stacks over time
     might_sample_count: int = 0  # Number of samples for averaging
@@ -508,7 +510,12 @@ class EVTCParser:
             self.events.append(event)
     
     def _parse_event_rev1(self, data: bytes) -> CombatEvent:
-        """Parse revision 1 combat event (64 bytes)."""
+        """EVTC parser for Guild Wars 2 combat logs (WvW focused).
+
+Deprecated for detailed stats: Elite Insights (EI) CLI is now the source of truth for
+boons/uptimes/strips/healing/etc. This parser is retained only for legacy fallback
+and basic header checks (e.g., WvW detection) when EI is not available.
+"""
         time = struct.unpack("<Q", data[0:8])[0]
         src_agent = struct.unpack("<Q", data[8:16])[0]
         dst_agent = struct.unpack("<Q", data[16:24])[0]
@@ -656,8 +663,10 @@ class EVTCParser:
                     is_ally=is_ally
                 )
         
-        # Track active boons per player (received): {player_addr: {buff_id: [(start_ms, end_ms, stack_info), ...]}}
+        # Track active boons per player (received): {player_addr: {buff_id: [(start_ms, end_ms, stack_count), ...]}}
         active_boons: dict[int, dict[int, list[tuple[int, int, int]]]] = {}
+        # Track which boons were already initialized at t=0 to avoid duplicate BUFFINITIAL intervals
+        initial_boon_seen: dict[int, set[int]] = defaultdict(set)
         
         # Track outgoing boons per player (given):
         # {src_player: {buff_id: {dst_player: [(start_ms, end_ms, stack_count)]}}}
@@ -747,12 +756,64 @@ class EVTCParser:
                         elif (event.skillid in CONDITION_SKILL_IDS) and target_stats.is_ally:
                             remover_stats.cleanses += stacks_removed
 
+                # Also truncate active boon intervals for the target (src_agent)
+                buff_id = event.skillid
+                target = event.src_agent
+                if buff_id in BOON_SKILL_IDS and target in active_boons and buff_id in active_boons[target]:
+                    remove_time = normalize_time(event.time)
+                    intervals = active_boons[target][buff_id]
+                    new_intervals = []
+                    if event.is_buffremove == BuffRemove.SINGLE:
+                        removed_one = False
+                        for start, end, stack in intervals:
+                            s = max(0, start)
+                            e = min(end, fight_duration_ms)
+                            if e <= s:
+                                continue
+                            if (not removed_one) and s < remove_time < e:
+                                e = remove_time
+                                removed_one = True
+                            if e > s:
+                                new_intervals.append((s, e, stack))
+                    else:  # BuffRemove.ALL or other non-manual removes: truncate all overlapping intervals at remove_time
+                        for start, end, stack in intervals:
+                            s = max(0, start)
+                            e = min(end, fight_duration_ms)
+                            if e <= s:
+                                continue
+                            if e > remove_time and remove_time > s:
+                                e = remove_time
+                            # If interval starts after remove_time, drop it (effect fully removed)
+                            if s >= remove_time:
+                                continue
+                            if e > s:
+                                new_intervals.append((s, e, stack))
+                    active_boons[target][buff_id] = new_intervals
+
                 # Skip further processing of this event for damage/boons
                 continue
             
             # Handle state changes
             if event.is_statechange != StateChange.NONE:
-                if event.is_statechange == StateChange.CHANGEDEAD:
+                # Initialize buffs present at start (BUFFINITIAL)
+                if event.is_statechange == StateChange.BUFFINITIAL:
+                    if event.src_agent in player_stats:
+                        dst_addr = event.src_agent
+                        buff_id = event.skillid
+                        # Only track boons we care about
+                        if buff_id in BOON_SKILL_IDS:
+                            if dst_addr not in active_boons:
+                                active_boons[dst_addr] = {}
+                            if buff_id not in active_boons[dst_addr]:
+                                active_boons[dst_addr][buff_id] = []
+                            # Use stack count if available (might uses is_shields as stack count when >0)
+                            stack_count = 1
+                            if buff_id == BoonID.MIGHT and event.is_shields > 0:
+                                stack_count = max(1, int(event.is_shields))
+                            # If value carries duration, we can keep end open until remove; store end as fight end placeholder
+                            for _ in range(stack_count):
+                                active_boons[dst_addr][buff_id].append((0, fight_duration_ms, 1))
+                elif event.is_statechange == StateChange.CHANGEDEAD:
                     changedead_events += 1
                     # Player death (allied player died)
                     if event.src_agent in player_stats:
@@ -852,8 +913,12 @@ class EVTCParser:
                         active_boons[event.dst_agent] = {}
                     if event.skillid not in active_boons[event.dst_agent]:
                         active_boons[event.dst_agent][event.skillid] = []
-                    # Store (start_ms, end_ms, stack_count) - is_shields is the stack count!
-                    active_boons[event.dst_agent][event.skillid].append((start_time, end_time, event.is_shields))
+                    # Store one interval per stack; for Might use is_shields if provided
+                    stack_count = 1
+                    if event.skillid == BoonID.MIGHT and event.is_shields > 0:
+                        stack_count = max(1, int(event.is_shields))
+                    for _ in range(stack_count):
+                        active_boons[event.dst_agent][event.skillid].append((start_time, end_time, 1))
                 
                 # Track OUTGOING boons: src_agent gave boon to dst_agent
                 # Only track if both are allied players and the boon is relevant
@@ -929,6 +994,15 @@ class EVTCParser:
                 continue
             
             player_boons = active_boons[player_addr]
+            # For BUFFINITIAL placeholders that never got a remove, ensure we clamp to fight end
+            for buff_id, intervals in list(player_boons.items()):
+                clamped = []
+                for start, end, stack in intervals:
+                    s = max(0, start)
+                    e = min(end, fight_duration_ms)
+                    if e > s:
+                        clamped.append((s, e, stack))
+                player_boons[buff_id] = clamped
             
             # Stability
             if BoonID.STABILITY in player_boons:
@@ -965,6 +1039,10 @@ class EVTCParser:
             # Resistance
             if BoonID.RESISTANCE in player_boons:
                 stats.resistance_uptime_ms = merged_duration(player_boons[BoonID.RESISTANCE])
+            
+            # Resolution
+            if BoonID.RESOLUTION in player_boons:
+                stats.resolution_uptime_ms = merged_duration(player_boons[BoonID.RESOLUTION])
             
             # Alacrity
             if BoonID.ALACRITY in player_boons:

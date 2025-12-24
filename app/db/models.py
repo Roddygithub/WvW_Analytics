@@ -42,6 +42,7 @@ class Fight(Base):
     enemy_count = Column(Integer, default=0, nullable=False)
     
     map_id = Column(Integer, nullable=True)
+    ei_json_path = Column(String, nullable=True)
     
     player_stats = relationship("PlayerStats", back_populates="fight", cascade="all, delete-orphan")
 
