@@ -82,13 +82,43 @@ def _parse_duration_ms(json_data: Dict[str, Any]) -> Optional[int]:
     return None
 
 
+def _flatten_entries(items: Any) -> list[Dict[str, Any]]:
+    """
+    EI may return per-phase arrays (list[list[dict]]); flatten to a single list of dict entries.
+    """
+    flat: list[Dict[str, Any]] = []
+    for item in items or []:
+        if isinstance(item, list):
+            flat.extend(_flatten_entries(item))
+        elif isinstance(item, dict):
+            flat.append(item)
+    return flat
+
+
+def _first_non_zero_entry(entries: Any, keys: tuple[str, ...]) -> Dict[str, Any]:
+    """
+    Pick the first entry that has a non-zero value for any of the provided keys.
+    If none, return the first entry or {}.
+    """
+    flat = _flatten_entries(entries)
+    for entry in flat:
+        for k in keys:
+            v = entry.get(k)
+            if isinstance(v, (int, float)) and v != 0:
+                return entry
+    return flat[0] if flat else {}
+
+
 def _find_buff_entries(player: Dict[str, Any], keys: list[str], buff_id: int) -> list[Dict[str, Any]]:
     for key in keys:
-        for entry in player.get(key, []) or []:
+        entries = _flatten_entries(player.get(key, []) or [])
+        for entry in entries:
             if entry.get("id") == buff_id:
-                data = entry.get("buffData", [])
-                if data:
+                data = entry.get("buffData")
+                if isinstance(data, list) and data:
                     return data
+                # Sometimes the data is directly on the entry (no buffData list)
+                return [entry]
     return []
 
 
@@ -99,10 +129,24 @@ def _uptime_from_buff_data(player: Dict[str, Any], buff_id: int, duration_ms: Op
     """
     entries = _find_buff_entries(player, ["buffUptimes", "buffUptimesActive"], buff_id)
     if entries:
-        uptime_ms = float(entries[0].get("uptime", 0.0) or 0.0)
-        if duration_ms and duration_ms > 0:
+        data = _first_non_zero_entry(entries, ("uptime", "duration", "active", "presence"))
+        # EI variants: "uptime" (ms), sometimes "duration" or "active"; also "presence" already in %
+        uptime_ms = float(
+            data.get("uptime")
+            or data.get("duration")
+            or data.get("active")
+            or 0.0
+        )
+        presence_pct = data.get("presence")
+
+        if duration_ms and duration_ms > 0 and uptime_ms:
             return min(100.0, (uptime_ms / duration_ms) * 100.0)
-        return uptime_ms
+        if presence_pct is not None:
+            try:
+                return float(presence_pct)
+            except (TypeError, ValueError):
+                pass
+        return float(uptime_ms)
     return 0.0
 
 
@@ -113,7 +157,8 @@ def _out_ms_from_generations(player: Dict[str, Any], buff_id: int) -> int:
     """
     entries = _find_buff_entries(player, ["buffGenerations", "buffGenerationsActive"], buff_id)
     if entries:
-        generated = entries[0].get("generation", 0)
+        data = _first_non_zero_entry(entries, ("generation", "uptime"))
+        generated = data.get("generation", data.get("uptime", 0))
         if generated:
             return int(generated)
     return 0
