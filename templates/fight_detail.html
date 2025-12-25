@@ -271,7 +271,7 @@
 </div>
 
 <!-- Enemy Players Section -->
-{% set enemy_players = fight.player_stats | rejectattr('account_name') | list %}
+{% set enemy_players = fight.player_stats | selectattr('is_ally', 'equalto', False) | list %}
 {% if enemy_players %}
 <div class="bg-surface-elevated border border-border-subtle rounded overflow-hidden">
     <div class="p-24 border-b border-border-subtle">

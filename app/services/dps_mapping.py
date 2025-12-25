@@ -109,6 +109,32 @@ def _first_non_zero_entry(entries: Any, keys: tuple[str, ...]) -> Dict[str, Any]
     return flat[0] if flat else {}
 
 
+def _first_non_empty(sections: list[dict], keys: tuple[str, ...]) -> Dict[str, Any]:
+    """
+    Choose the first dict that contains any of the keys (even if zero),
+    falling back to the first dict.
+    """
+    flat = _flatten_entries(sections)
+    for entry in flat:
+        if any(k in entry for k in keys):
+            return entry
+    return flat[0] if flat else {}
+
+
+def _first_stats_entry(sections: list[dict], keys: tuple[str, ...]) -> Dict[str, Any]:
+    """
+    Choose the first stats dict that has a non-zero value for any of the given keys.
+    Falls back to the first dict if none have non-zero data.
+    """
+    flat = _flatten_entries(sections)
+    for entry in flat:
+        for k in keys:
+            v = entry.get(k)
+            if isinstance(v, (int, float)) and v != 0:
+                return entry
+    return flat[0] if flat else {}
+
+
 def _find_buff_entries(player: Dict[str, Any], keys: list[str], buff_id: int) -> list[Dict[str, Any]]:
     for key in keys:
         entries = _flatten_entries(player.get(key, []) or [])
@@ -204,15 +230,18 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
         elite = player.get("eliteSpec", None)
         spec_name = f"{prof or ''}{' (' + elite + ')' if elite else ''}".strip()
 
-        dps_all = player.get("dpsAll", [])
-        support_all = player.get("supportAll", [])
-        defense_all = player.get("defenseAll", [])
+        dps_all = player.get("dpsAll", []) or []
+        support_all = player.get("supportAll", []) or []
+        defense_all = player.get("defenseAll", []) or []
+        stats_all = player.get("statsAll", []) or []
 
-        stats_all = player.get("statsAll", [])
+        # EI sometimes uses "support"/"defenses" arrays (preferred) instead of supportAll/defenseAll
+        support_pref = player.get("support", []) or []
+        defense_pref = player.get("defenses", []) or []
 
-        dps_total = dps_all[0] if dps_all else (stats_all[0] if stats_all else {})
-        support = support_all[0] if support_all else (stats_all[0] if stats_all else {})
-        defense = defense_all[0] if defense_all else (stats_all[0] if stats_all else {})
+        dps_total = _first_stats_entry(dps_all or stats_all, ("damage", "dps", "breakbarDamage", "kills"))
+        support = _first_stats_entry(support_pref or support_all or stats_all, ("condiCleanse", "boonStrips", "healing", "barrier", "boonStripsTime"))
+        defense = _first_stats_entry(defense_pref or defense_all or stats_all, ("downs", "dead", "damageTaken", "condiCleanse", "boonStrips", "breakbarDamage", "boonStripsTime"))
 
         total_damage = int(_safe_get(dps_total, "damage", 0))
         dps = float(_safe_get(dps_total, "dps", 0.0))
@@ -222,7 +251,11 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
         damage_taken = int(_safe_get(defense, "damageTaken", 0))
         cleanses = int(_safe_get(support, "condiCleanse", _safe_get(defense, "condiCleanse", 0)))
         strips_out = int(_safe_get(support, "boonStrips", _safe_get(defense, "boonStrips", 0)))
-        cc_total = int(_safe_get(dps_total, "breakbarDamage", _safe_get(defense, "breakbarDamage", 0)))
+        cc_total = int(
+            _safe_get(dps_total, "breakbarDamage",
+                      _safe_get(defense, "breakbarDamage",
+                                _safe_get(support, "appliedCrowdControl", 0)))
+        )
         healing_out = int(_safe_get(support, "healing", 0))
         barrier_out = int(_safe_get(support, "barrier", 0))
 
@@ -238,6 +271,7 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
 
         return PlayerStats(
             fight_id=None,  # filled when persisted
+            is_ally=is_ally,
             character_name=character,
             account_name=account_value,
             profession=str(prof) if prof is not None else None,

@@ -17,9 +17,14 @@ depends_on = None
 
 
 def upgrade():
+    inspector = sa.inspect(op.get_bind())
+    columns = {col["name"] for col in inspector.get_columns("fights")}
+
     with op.batch_alter_table("fights") as batch_op:
-        batch_op.add_column(sa.Column("dps_permalink", sa.String(), nullable=True))
-        batch_op.add_column(sa.Column("dps_json_path", sa.String(), nullable=True))
+        if "dps_permalink" not in columns:
+            batch_op.add_column(sa.Column("dps_permalink", sa.String(), nullable=True))
+        if "dps_json_path" not in columns:
+            batch_op.add_column(sa.Column("dps_json_path", sa.String(), nullable=True))
 
 
 def downgrade():

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Enum as SQLEnum, BigInteger
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Enum as SQLEnum, BigInteger, Boolean
 from sqlalchemy.orm import relationship
 import enum
 
@@ -55,6 +55,7 @@ class PlayerStats(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     fight_id = Column(Integer, ForeignKey("fights.id"), nullable=False)
+    is_ally = Column(Boolean, default=True, nullable=False)
     
     character_name = Column(String, nullable=False)
     account_name = Column(String, nullable=True)

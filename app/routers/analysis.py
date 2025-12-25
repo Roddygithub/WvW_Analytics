@@ -233,11 +233,8 @@ async def view_fight(
             status_code=404
         )
     
-    # Include allied players. In WvW logs, enemies typically have subgroup=0 and no account name.
-    # Some allies may have missing account names; include them if subgroup > 0.
-    allied_players = [
-        p for p in fight.player_stats if p.account_name or (p.subgroup and p.subgroup > 0)
-    ]
+    # Allies: explicit flag from EI mapping
+    allied_players = [p for p in fight.player_stats if getattr(p, "is_ally", True)]
     show_boon_columns = bool(show_boons)
 
     fight_duration_ms = fight.duration_ms or 0

@@ -12,6 +12,7 @@ class PlayerStatsBase(BaseModel):
     profession: Optional[str] = None
     elite_spec: Optional[str] = None
     subgroup: int = 0
+    is_ally: bool = True
     
     total_damage: int = 0
     dps: float = 0.0

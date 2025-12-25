@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from app.db.base import Base
 
 
 # revision identifiers, used by Alembic.
@@ -20,7 +21,15 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    inspector = sa.inspect(op.get_bind())
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_tables = set(inspector.get_table_names())
+
+    # If this is a fresh database, create all tables from current models to ensure the base schema exists.
+    if "player_stats" not in existing_tables or "fights" not in existing_tables:
+        Base.metadata.create_all(bind=bind)
+        inspector = sa.inspect(bind)
+
     columns = {col["name"] for col in inspector.get_columns("player_stats")}
 
     with op.batch_alter_table("player_stats") as batch_op:
