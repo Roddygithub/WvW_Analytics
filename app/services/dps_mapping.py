@@ -22,7 +22,7 @@ BOON_IDS = {
     "resistance": 26980,
     "resolution": 873,
     "superspeed": 5974,
-    "stealth": 130,
+    "stealth": 13017,
 }
 
 
@@ -156,38 +156,73 @@ def _uptime_from_buff_data(player: Dict[str, Any], buff_id: int, duration_ms: Op
     entries = _find_buff_entries(player, ["buffUptimes", "buffUptimesActive"], buff_id)
     if entries:
         data = _first_non_zero_entry(entries, ("uptime", "duration", "active", "presence"))
-        # EI variants: "uptime" (ms), sometimes "duration" or "active"; also "presence" already in %
-        uptime_ms = float(
-            data.get("uptime")
-            or data.get("duration")
-            or data.get("active")
-            or 0.0
-        )
+        # EI variants:
+        # - "uptime" typically expressed as a duration in seconds *or* a percent (> duration_ms)
+        # - "duration"/"active" sometimes used instead of uptime
+        # - "presence" already in percent
+        raw_uptime = data.get("uptime") or data.get("duration") or data.get("active") or 0.0
+        try:
+            uptime_val = float(raw_uptime)
+        except (TypeError, ValueError):
+            uptime_val = 0.0
+
         presence_pct = data.get("presence")
 
-        if duration_ms and duration_ms > 0 and uptime_ms:
-            return min(100.0, (uptime_ms / duration_ms) * 100.0)
+        if uptime_val and uptime_val > 0:
+            # EI buffData.uptime is frequently expressed in seconds. If it is plausibly seconds (<= fight seconds + buffer),
+            # convert to percent using ms denominator.
+            fight_seconds = duration_ms / 1000.0 if duration_ms else 0.0
+            if uptime_val <= fight_seconds + 5:  # small buffer
+                return min(100.0, (uptime_val * 1000.0 / duration_ms) * 100.0)
+
+            # If uptime value looks like a percentage (> fight duration in ms when treated as milliseconds),
+            # treat it directly as percent.
+            if uptime_val > duration_ms:
+                return min(100.0, uptime_val)
+
+            return min(100.0, (uptime_val / duration_ms) * 100.0)
+
         if presence_pct is not None:
             try:
                 return float(presence_pct)
             except (TypeError, ValueError):
                 pass
-        return float(uptime_ms)
+
+        return float(uptime_val)
     return 0.0
 
 
 def _out_ms_from_generations(player: Dict[str, Any], buff_id: int) -> int:
     """
-    Extract outgoing boon generation (milliseconds) if present in EI buff generation tables.
-    Falls back to buffGenerationsActive.
+    Extract outgoing boon generation (milliseconds).
+    EI may populate `buffGenerations`/`buffGenerationsActive` (preferred) or place
+    `generated`/`overstacked` fields inside `buffUptimes`/`buffUptimesActive`.
     """
+    # Preferred: explicit generations tables
     entries = _find_buff_entries(player, ["buffGenerations", "buffGenerationsActive"], buff_id)
-    if entries:
-        data = _first_non_zero_entry(entries, ("generation", "uptime"))
-        generated = data.get("generation", data.get("uptime", 0))
+    if not entries:
+        # Fallback: use buffUptimes* generated fields per source
+        entries = _find_buff_entries(player, ["buffUptimes", "buffUptimesActive"], buff_id)
+
+    if not entries:
+        return 0
+
+    # Sum generation-esque fields across entries (usually one entry)
+    total_ms = 0.0
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        generated = entry.get("generation")
         if generated:
-            return int(generated)
-    return 0
+            total_ms += float(generated)
+            continue
+        # EI may provide per-source dicts under "generated"/"overstacked"
+        for key in ("generated", "overstacked", "wasted"):
+            per_source = entry.get(key)
+            if isinstance(per_source, dict):
+                total_ms += sum(float(v or 0.0) for v in per_source.values())
+    # Values are seconds; convert to ms
+    return int(total_ms * 1000.0)
 
 
 @dataclass
