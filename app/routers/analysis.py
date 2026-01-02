@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.db.base import get_db
 from app.services import logs_service
+from app.services.dps_mapping import BOON_IDS
 
 router = APIRouter(prefix="/analyze", tags=["analysis"])
 templates = Jinja2Templates(directory="templates")
@@ -239,45 +240,86 @@ async def view_fight(
 
     fight_duration_ms = fight.duration_ms or 0
 
-    # Squad boon uptimes per subgroup
-    group_totals: dict[int, dict] = defaultdict(lambda: {"count": 0, "boon_active_ms": defaultdict(float)})
-    squad_total = {"count": 0, "boon_active_ms": defaultdict(float)}
+    # Squad boon uptimes per subgroup (weighted by active duration)
+    def active_duration_ms(player) -> float:
+        """Active duration = phase duration - deadDuration - dcDuration (clamped to 0)."""
+        dead_ms = getattr(player, "dead_duration_ms", None)
+        dc_ms = getattr(player, "dc_duration_ms", None)
+        if dead_ms is None and dc_ms is None:
+            presence = getattr(player, "presence", None) or getattr(player, "presence_pct", None)
+            try:
+                presence_val = float(presence) if presence is not None else None
+            except (TypeError, ValueError):
+                presence_val = None
+            if presence_val is not None and presence_val > 0 and fight_duration_ms:
+                return fight_duration_ms * (presence_val / 100.0)
+            return float(fight_duration_ms or 0)
+        dead_val = float(dead_ms or 0)
+        dc_val = float(dc_ms or 0)
+        return max(0.0, float(fight_duration_ms or 0) - dead_val - dc_val)
+
+    group_totals: dict[int, dict] = defaultdict(lambda: {"active_ms": 0.0, "boon_ms": defaultdict(float)})
+    squad_total = {"active_ms": 0.0, "boon_ms": defaultdict(float)}
+
+    def buff_ms_from_states(player, buff_key: str, active_ms: float, phase_ms: float) -> float:
+        """Prefer raw states (boonGraph) to compute buff active ms; fallback to % uptime."""
+        buff_id = BOON_IDS.get(buff_key)
+        states_map = getattr(player, "boon_states", {}) or {}
+        states = states_map.get(buff_id) if buff_id is not None else None
+        if states:
+            states_sorted = sorted(states, key=lambda x: x[0])
+            active = 0.0
+            for (t, val), (t_next, _) in zip(states_sorted, states_sorted[1:]):
+                if val and val > 0:
+                    active += max(0.0, t_next - t)
+            # Clamp to active duration
+            if active_ms > 0:
+                active = min(active, active_ms)
+            return active
+        # Fallback: use stored percentage
+        value = getattr(player, f"{buff_key}_uptime", 0.0) or 0.0
+        normalized_percent = min(100.0, max(0.0, float(value)))
+        buff_ms = (normalized_percent / 100.0) * phase_ms
+        if active_ms > 0:
+            buff_ms = min(buff_ms, active_ms)
+        return buff_ms
 
     for player in allied_players:
         subgroup = player.subgroup or 0
         group_entry = group_totals[subgroup]
-        group_entry["count"] += 1
+        phase_ms = float(fight_duration_ms or 0)
+        active_ms = active_duration_ms(player)
+        if active_ms <= 0 and phase_ms > 0:
+            active_ms = phase_ms
+        group_entry["active_ms"] += active_ms
         # Exclude non-squad (subgroup 0) from "Squad Average" like EI
         if subgroup and subgroup > 0:
-            squad_total["count"] += 1
+            squad_total["active_ms"] += active_ms
 
         for column in BOON_COLUMNS:
-            value = getattr(player, column["uptime_attr"], 0.0) or 0.0
-            normalized_percent = min(100.0, max(0.0, float(value)))
-            active_ms = (normalized_percent / 100.0) * fight_duration_ms if fight_duration_ms else 0.0
-            group_entry["boon_active_ms"][column["key"]] += active_ms
+            buff_ms = buff_ms_from_states(player, column["key"], active_ms, phase_ms)
+            group_entry["boon_ms"][column["key"]] += buff_ms
             if subgroup and subgroup > 0:
-                squad_total["boon_active_ms"][column["key"]] += active_ms
+                squad_total["boon_ms"][column["key"]] += buff_ms
 
     def build_boon_row(label: str, data: dict, group_number: int | None = None) -> dict:
         boons = {}
-        count = data["count"]
+        active_ms = data["active_ms"]
         for column in BOON_COLUMNS:
-            denominator = (fight_duration_ms * count)
-            if denominator > 0:
-                uptime_pct = (data["boon_active_ms"][column["key"]] / denominator) * 100.0
+            if active_ms > 0:
+                uptime_pct = (data["boon_ms"][column["key"]] / active_ms) * 100.0
                 boons[column["key"]] = round(min(100.0, max(0.0, uptime_pct)), 1)
             else:
                 boons[column["key"]] = 0.0
         return {
             "label": label,
             "group": group_number,
-            "player_count": count,
+            "player_count": int(active_ms > 0),  # legacy field, not used in weighting display
             "boons": boons,
         }
 
     squad_boon_uptimes = []
-    if squad_total["count"] > 0:
+    if squad_total["active_ms"] > 0:
         squad_boon_uptimes.append(build_boon_row("Squad Average", squad_total))
     for group in sorted(group_totals.keys()):
         label = f"Group {group}" if group else "Group ?"
