@@ -50,6 +50,9 @@ Thumbs.db
 uploads/
 temp/
 
+# Local EI exports
+data/dps_report/*.json
+
 # Testing
 .pytest_cache/
 .coverage
