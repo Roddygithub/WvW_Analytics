@@ -60,73 +60,57 @@ ALLIED_NUMERIC_COLUMNS = [
 BOON_GENERATION_COLUMNS = [
     {
         "key": "quickness_out",
-        "label": "Quickness (s)",
+        "label": "Quickness (%)",
         "attr": "quickness_out_ms",
-        "display_attr": "quickness_out_s",
     },
     {
         "key": "protection_out",
-        "label": "Protection (s)",
+        "label": "Protection (%)",
         "attr": "protection_out_ms",
-        "display_attr": "protection_out_s",
     },
     {
         "key": "vigor_out",
-        "label": "Vigor (s)",
+        "label": "Vigor (%)",
         "attr": "vigor_out_ms",
-        "display_attr": "vigor_out_s",
     },
     {
         "key": "aegis_out",
-        "label": "Aegis (s)",
+        "label": "Aegis (%)",
         "attr": "aegis_out_ms",
-        "display_attr": "aegis_out_s",
     },
     {
         "key": "stability_out",
-        "label": "Stability (s)",
+        "label": "Stability (%)",
         "attr": "stab_out_ms",
-        "display_attr": "stability_out_s",
     },
     {
         "key": "resistance_out",
-        "label": "Resistance (s)",
+        "label": "Resistance (%)",
         "attr": "resistance_out_ms",
-        "display_attr": "resistance_out_s",
     },
     {
         "key": "superspeed_out",
-        "label": "Superspeed (s)",
+        "label": "Superspeed (%)",
         "attr": "superspeed_out_ms",
-        "display_attr": "superspeed_out_s",
-    },
-    {
-        "key": "stability_out",
-        "label": "Stability (s)",
-        "attr": "stab_out_ms",
-        "display_attr": "stability_out_s",
     },
     {
         "key": "alacrity_out",
-        "label": "Alacrity (s)",
+        "label": "Alacrity (%)",
         "attr": "alacrity_out_ms",
-        "display_attr": "alacrity_out_s",
     },
     {
         "key": "fury_out",
-        "label": "Fury (s)",
+        "label": "Fury (%)",
         "attr": "fury_out_ms",
-        "display_attr": "fury_out_s",
     },
     {
         "key": "regeneration_out",
-        "label": "Regeneration (s)",
+        "label": "Regeneration (%)",
         "attr": "regeneration_out_ms",
-        "display_attr": "regeneration_out_s",
     },
     {
         "key": "might_out",
-        "label": "Might (stack-s)",
+        "label": "Might (avg stacks)",
         "attr": "might_out_stacks",
         "display_attr": "might_out_stack_seconds",
     },
@@ -234,8 +218,11 @@ async def view_fight(
             status_code=404
         )
     
-    # Allies: explicit flag from EI mapping
-    allied_players = [p for p in fight.player_stats if getattr(p, "is_ally", True)]
+    # Allies: explicit flag from EI mapping, exclude non-squad rows (subgroup <=0 or >=50)
+    allied_players = [
+        p for p in fight.player_stats
+        if getattr(p, "is_ally", True) and 0 < int(getattr(p, "subgroup", 0) or 0) < 50
+    ]
     show_boon_columns = bool(show_boons)
 
     fight_duration_ms = fight.duration_ms or 0
@@ -311,16 +298,26 @@ async def view_fight(
                 boons[column["key"]] = round(min(100.0, max(0.0, uptime_pct)), 1)
             else:
                 boons[column["key"]] = 0.0
+        # Count actual players contributing to this group
+        player_count = len([p for p in allied_players if (p.subgroup or 0) == group_number]) if group_number is not None else 0
         return {
             "label": label,
             "group": group_number,
-            "player_count": int(active_ms > 0),  # legacy field, not used in weighting display
+            "player_count": player_count,
             "boons": boons,
         }
 
     squad_boon_uptimes = []
     if squad_total["active_ms"] > 0:
-        squad_boon_uptimes.append(build_boon_row("Squad Average", squad_total))
+        squad_boon_uptimes.append(build_boon_row("Squad Average", squad_total, None))
+    else:
+        # Ensure Squad Average always shows total player count even if active_ms=0
+        squad_boon_uptimes.append({
+            "label": "Squad Average",
+            "group": None,
+            "player_count": len(allied_players),
+            "boons": {col["key"]: 0.0 for col in BOON_COLUMNS},
+        })
     for group in sorted(group_totals.keys()):
         label = f"Group {group}" if group else "Group ?"
         squad_boon_uptimes.append(build_boon_row(label, group_totals[group], group))

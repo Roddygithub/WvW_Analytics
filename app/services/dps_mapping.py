@@ -505,8 +505,10 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
 
         total_damage = int(_col(phase_dps, idx, 0, _safe_get(dps_total, "damage", 0)))
         dps = float(total_damage)
-        downs = int(_safe_get(defense, "downs", 0))
-        deaths = int(_safe_get(defense, "dead", 0))
+        downs_val = _col(phase_def, idx, 13, _safe_get(defense, "downCount", _safe_get(defense, "downs", 0)))
+        deaths_val = _col(phase_def, idx, 15, _safe_get(defense, "deadCount", _safe_get(defense, "dead", 0)))
+        downs = int(_to_number(downs_val, 0))
+        deaths = int(_to_number(deaths_val, 0))
         kills = int(_safe_get(dps_total, "kills", 0))
         damage_taken = int(_col(phase_def, idx, 0, _safe_get(defense, "damageTaken", 0)))
         cleanses = int(_safe_get(support, "condiCleanse", _safe_get(defense, "condiCleanse", 0)))
@@ -522,9 +524,9 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
         evaded_count = int(_col(phase_def, idx, 6, _safe_get(combat_stats, "evaded", _safe_get(defense, "evadedCount", 0))))
         blocked_count = int(_col(phase_def, idx, 7, _safe_get(combat_stats, "blocked", _safe_get(defense, "blockedCount", 0))))
         dodged_count = int(_col(phase_def, idx, 8, _safe_get(combat_stats, "dodgeCount", _safe_get(defense, "dodgeCount", 0))))
-        downs_count = int(_col(phase_def, idx, 13, _safe_get(defense, "downCount", _safe_get(combat_stats, "downed", 0))))
+        downs_count = int(_to_number(_col(phase_def, idx, 13, _safe_get(defense, "downCount", _safe_get(combat_stats, "downed", 0))), 0))
         downed_damage_taken = int(_col(phase_def, idx, 14, _safe_get(defense, "downedDamageTaken", 0)))
-        dead_count = int(_col(phase_def, idx, 15, _safe_get(defense, "deadCount", 0)))
+        dead_count = int(_to_number(_col(phase_def, idx, 15, _safe_get(defense, "deadCount", 0)), 0))
 
         cleanses_other = int(_col(phase_sup, idx, 0, _safe_get(support, "condiCleanse", 0)))
         cleanses_self = int(_col(phase_sup, idx, 2, _safe_get(support, "condiCleanseSelf", 0)))
@@ -638,6 +640,10 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
         ps.downs_count = downs_count
         ps.downed_damage_taken = downed_damage_taken
         ps.dead_count = dead_count
+        # Combat summaries (table columns)
+        ps.downs = downs
+        ps.kills = kills
+        ps.deaths = deaths
         ps.cleanses_other = cleanses_other
         ps.cleanses_self = cleanses_self
         ps.resurrects = resurrects
