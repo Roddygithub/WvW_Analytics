@@ -305,11 +305,11 @@ def _uptime_from_buff_data(
     return 0.0
 
 
-def _out_ms_from_generations(player: Dict[str, Any], buff_id: int) -> int:
+def _out_ms_from_generations(player: Dict[str, Any], buff_id: int, duration_ms: Optional[int] = None) -> int:
     """
     Extract outgoing boon generation (milliseconds).
     EI may populate `buffGenerations`/`buffGenerationsActive` (preferred) or place
-    `generated`/`overstacked` fields inside `buffUptimes`/`buffUptimesActive`.
+    values directly in support stats; we aggregate them here.
     """
     # Preferred: explicit generations tables
     entries = _find_buff_entries(player, ["buffGenerations", "buffGenerationsActive"], buff_id)
@@ -386,47 +386,6 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
     phase_def = phase0.get("defStats") or []
     phase_sup = phase0.get("supportStats") or []
     phase_gp = phase0.get("gameplayStats") or []
-
-    def _to_number(val, default=0):
-        if isinstance(val, (int, float)):
-            return val
-        if isinstance(val, str):
-            m = re.search(r"[-+]?\d*\.?\d+", val)
-            if m:
-                try:
-                    return float(m.group(0))
-                except Exception:
-                    return default
-        return default
-
-    def _to_int(val, default=0) -> int:
-        try:
-            if val is None:
-                return default
-            return int(val)
-        except (TypeError, ValueError):
-            try:
-                return int(float(val))
-            except Exception:
-                return default
-
-    def _to_float(val, default=0.0) -> float:
-        try:
-            if val is None:
-                return default
-            return float(val)
-        except (TypeError, ValueError):
-            return default
-
-    def _states_ms(states):
-        out = []
-        for entry in states or []:
-            try:
-                t, v = entry
-                out.append([float(t) * 1000.0, v])
-            except Exception:
-                continue
-        return out
 
     def _build_player_stats(player: Dict[str, Any], is_ally: bool, idx: int) -> PlayerStats:
         character = player.get("name", "Unknown")
@@ -570,7 +529,10 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
             )
 
         # Outgoing boon production (ms) if available
-        outgoing_ms = {name: _out_ms_from_generations(player, buff_id) for name, buff_id in BOON_IDS.items()}
+        outgoing_ms = {
+            name: _out_ms_from_generations(player, buff_id, duration_ms)
+            for name, buff_id in BOON_IDS.items()
+        }
 
         # For enemies, keep subgroup=0 to avoid showing in allied subgroup aggregation
         subgroup_value = subgroup if is_ally else 0
@@ -616,12 +578,12 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
             aegis_out_ms=outgoing_ms["aegis"],
             protection_out_ms=outgoing_ms["protection"],
             quickness_out_ms=outgoing_ms["quickness"],
-            superspeed_out_ms=_to_int(support.get("superspeedOut"), 0),
-            resistance_out_ms=_to_int(support.get("resistanceOut"), 0),
+            superspeed_out_ms=min(_to_int(support.get("superspeedOut"), 0), duration_ms),
+            resistance_out_ms=min(_to_int(support.get("resistanceOut"), 0), duration_ms),
             might_out_stacks=_to_int(support.get("mightOut"), 0),
-            fury_out_ms=_to_int(support.get("furyOut"), 0),
-            regeneration_out_ms=_to_int(support.get("regenerationOut"), 0),
-            vigor_out_ms=_to_int(support.get("vigorOut"), 0),
+            fury_out_ms=min(_to_int(support.get("furyOut"), 0), duration_ms),
+            regeneration_out_ms=min(_to_int(support.get("regenerationOut"), 0), duration_ms),
+            vigor_out_ms=min(_to_int(support.get("vigorOut"), 0), duration_ms),
         )
 
         # Attach non-persisted calibration fields for EI alignment (future-proofing)
