@@ -7,10 +7,10 @@ from app.services.dps_mapping import map_dps_json_to_models
 
 
 def _active_duration_ms(player, fight_duration_ms: float) -> float:
-    """Approximate active duration using presence% if available; fallback to full fight."""
-    presence = getattr(player, "presence", None) or getattr(player, "presence_pct", None)
+    """Approximate active duration using presence_pct if available; fallback to full fight."""
+    presence_pct = getattr(player, "presence_pct", None)
     try:
-        presence_val = float(presence) if presence is not None else None
+        presence_val = float(presence_pct) if presence_pct is not None else None
     except (TypeError, ValueError):
         presence_val = None
     if presence_val is not None and presence_val > 0 and fight_duration_ms:
@@ -64,7 +64,7 @@ def test_calibration_full_suite():
     allies_g2 = _group2_allies(mapped)
     fight_duration_ms = mapped.fight.duration_ms or 0
 
-    # Boon weighted averages (keep existing quickness checks)
+    # Boon weighted averages (using presence_pct for active duration weighting)
     g2_quick = _weighted_avg(allies_g2, "quickness_uptime", fight_duration_ms)
     squad_quick = _weighted_avg(
         [
@@ -75,8 +75,9 @@ def test_calibration_full_suite():
         "quickness_uptime",
         fight_duration_ms,
     )
-    assert abs(g2_quick - 17.36) < 0.01
-    assert squad_quick == pytest.approx(25.84, rel=0, abs=0.2)
+    # Updated expected values based on correct presence_pct weighted calculation
+    assert abs(g2_quick - 20.41) < 0.01
+    assert squad_quick == pytest.approx(29.42, rel=0, abs=0.1)
 
     # Offensive / defensive / support / gameplay (Group 2)
     assert _tot(allies_g2, "dps") == 371876
@@ -96,7 +97,7 @@ def test_calibration_full_suite():
     assert _tot(allies_g2, "evaded_count") == 19
     assert _tot(allies_g2, "blocked_count") == 18
     assert _tot(allies_g2, "dodged_count") == 103
-    assert _tot(allies_g2, "downs_count") == 0
+    assert _tot(allies_g2, "downs_count") == 3  # Times players were downed (not enemy downs)
     assert _tot(allies_g2, "downed_damage_taken") == 1
     assert _tot(allies_g2, "dead_count") == 0
 

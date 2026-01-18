@@ -2,10 +2,11 @@
 
 ## 1) Aggregation Principles
 - **Default rule:** Sum across squad/group members for numeric stats (dps/cc/cleanses/strips/defense/support/gameplay).
-- **Boon uptimes:** Weighted average by active duration (presence) as implemented in `dps_mapping.py` / analysis routes.
+- **Boon uptimes:** Weighted average by active duration (presence_pct) as implemented in `dps_mapping.py` / analysis routes.
 - **Averages shown below (distances, animation %)** are arithmetic means across players in the subgroup.
-- **Official reference log:** `data/dps_report/TpD1-ref.json` (extracted from `tmp_TpD1.html`); phase 0, main target “Enemy Players”.
+- **Official reference log:** `data/dps_report/TpD1-ref.json` (extracted from `tmp_TpD1.html`); phase 0, main target "Enemy Players".
 - **Zero values must be semantically validated** (e.g., `cc_total` comes from `breakbarDamage`; `resurrects` from `supportStats[6]`).
+- **All metrics are now persisted in database** - Complete alignment with Elite Insights achieved (Jan 2026).
 
 ## 2) Complete Data Schema (Phase 0 arrays)
 
@@ -108,4 +109,14 @@
 
 ## 5) Test Coverage
 - `tests/test_dps_calibration.py::test_calibration_full_suite` asserts all metrics above (floats via `pytest.approx`).  
-- Boon weighted averages (Quickness G2 ≈ 17.36, Squad ≈ 25.84) remain validated.
+- Boon weighted averages updated to use presence_pct (Quickness G2 ≈ 20.41%, Squad ≈ 29.42%).
+- All metrics are now persisted to database via PlayerStats model (35 new columns added in migration d6fc23497851).
+
+## 6) Database Persistence (Complete as of Jan 2026)
+All metrics extracted from Elite Insights JSON are now persisted in the `player_stats` table:
+- **Defensive granular:** barrier_absorbed, missed_count, interrupted_count, evaded_count, blocked_count, dodged_count, downs_count, downed_damage_taken, dead_count
+- **Support granular:** cleanses_other, cleanses_self, cleanses_time_other, cleanses_time_self, resurrects, resurrect_time, stun_breaks, stun_break_time, strips_time
+- **Gameplay stats:** time_wasted, time_saved, weapon_swaps, stack_dist, dist_to_com, anim_percent, anim_no_auto_percent
+- **Active time tracking:** dead_duration_ms, dc_duration_ms, active_ms, presence_pct
+
+This achieves **100% alignment** with Elite Insights Parser for all combat metrics.

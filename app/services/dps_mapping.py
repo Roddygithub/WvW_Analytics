@@ -307,9 +307,12 @@ def _uptime_from_buff_data(
 
 def _out_ms_from_generations(player: Dict[str, Any], buff_id: int, duration_ms: Optional[int] = None) -> int:
     """
-    Extract outgoing boon generation (milliseconds).
+    Extract outgoing boon generation (milliseconds for duration boons, stack-ms for might).
     EI may populate `buffGenerations`/`buffGenerationsActive` (preferred) or place
     values directly in support stats; we aggregate them here.
+    
+    For might (740), EI returns stack-seconds which we convert to stack-milliseconds.
+    For other boons, EI returns seconds which we convert to milliseconds.
     """
     # Preferred: explicit generations tables
     entries = _find_buff_entries(player, ["buffGenerations", "buffGenerationsActive"], buff_id)
@@ -321,21 +324,22 @@ def _out_ms_from_generations(player: Dict[str, Any], buff_id: int, duration_ms: 
         return 0
 
     # Sum generation-esque fields across entries (usually one entry)
-    total_ms = 0.0
+    total_seconds = 0.0
     for entry in entries:
         if not isinstance(entry, dict):
             continue
         generated = entry.get("generation")
         if generated:
-            total_ms += float(generated)
+            total_seconds += float(generated)
             continue
         # EI may provide per-source dicts under "generated"/"overstacked"
         for key in ("generated", "overstacked", "wasted"):
             per_source = entry.get(key)
             if isinstance(per_source, dict):
-                total_ms += sum(float(v or 0.0) for v in per_source.values())
-    # Values are seconds; convert to ms
-    return int(total_ms * 1000.0)
+                total_seconds += sum(float(v or 0.0) for v in per_source.values())
+    
+    # Convert seconds to milliseconds (for might this is stack-seconds to stack-ms)
+    return int(total_seconds * 1000.0)
 
 
 @dataclass
@@ -467,7 +471,8 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
         downs_val = _col(phase_def, idx, 13, _safe_get(defense, "downCount", _safe_get(defense, "downs", 0)))
         deaths_val = _col(phase_def, idx, 15, _safe_get(defense, "deadCount", _safe_get(defense, "dead", 0)))
         downs = int(_to_number(downs_val, 0))
-        deaths = int(_to_number(deaths_val, 0))
+        # deaths_val from defStats[15] is often text like "100% Alive", extract from defense dict instead
+        deaths = int(_safe_get(defense, "deadCount", _safe_get(defense, "dead", 0)))
         kills = int(_safe_get(dps_total, "kills", 0))
         damage_taken = int(_col(phase_def, idx, 0, _safe_get(defense, "damageTaken", 0)))
         cleanses = int(_safe_get(support, "condiCleanse", _safe_get(defense, "condiCleanse", 0)))
@@ -485,7 +490,8 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
         dodged_count = int(_col(phase_def, idx, 8, _safe_get(combat_stats, "dodgeCount", _safe_get(defense, "dodgeCount", 0))))
         downs_count = int(_to_number(_col(phase_def, idx, 13, _safe_get(defense, "downCount", _safe_get(combat_stats, "downed", 0))), 0))
         downed_damage_taken = int(_col(phase_def, idx, 14, _safe_get(defense, "downedDamageTaken", 0)))
-        dead_count = int(_to_number(_col(phase_def, idx, 15, _safe_get(defense, "deadCount", 0)), 0))
+        # defStats[15] contains text like "100% Alive", use defense dict instead
+        dead_count = int(_safe_get(defense, "deadCount", _safe_get(defense, "dead", 0)))
 
         cleanses_other = int(_col(phase_sup, idx, 0, _safe_get(support, "condiCleanse", 0)))
         cleanses_self = int(_col(phase_sup, idx, 2, _safe_get(support, "condiCleanseSelf", 0)))
@@ -559,6 +565,7 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
             cleanses=cleanses,
             healing_out=healing_out,
             barrier_out=barrier_out,
+            # Boon uptimes
             stability_uptime=uptimes["stability"],
             quickness_uptime=uptimes["quickness"],
             aegis_uptime=uptimes["aegis"],
@@ -572,56 +579,56 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
             swiftness_uptime=uptimes["swiftness"],
             stealth_uptime=uptimes["stealth"],
             resolution_uptime=uptimes["resolution"],
-            # Might uptime: keep EI percentage (0-100)
             might_uptime=uptimes["might"],
+            # Boon generation (outgoing)
             stab_out_ms=outgoing_ms["stability"],
             aegis_out_ms=outgoing_ms["aegis"],
             protection_out_ms=outgoing_ms["protection"],
             quickness_out_ms=outgoing_ms["quickness"],
-            superspeed_out_ms=min(_to_int(support.get("superspeedOut"), 0), duration_ms),
-            resistance_out_ms=min(_to_int(support.get("resistanceOut"), 0), duration_ms),
-            might_out_stacks=_to_int(support.get("mightOut"), 0),
-            fury_out_ms=min(_to_int(support.get("furyOut"), 0), duration_ms),
-            regeneration_out_ms=min(_to_int(support.get("regenerationOut"), 0), duration_ms),
-            vigor_out_ms=min(_to_int(support.get("vigorOut"), 0), duration_ms),
+            alacrity_out_ms=outgoing_ms["alacrity"],
+            superspeed_out_ms=outgoing_ms["superspeed"],
+            resistance_out_ms=outgoing_ms["resistance"],
+            might_out_stacks=outgoing_ms["might"],
+            fury_out_ms=outgoing_ms["fury"],
+            regeneration_out_ms=outgoing_ms["regeneration"],
+            vigor_out_ms=outgoing_ms["vigor"],
+            # Defensive granular stats
+            barrier_absorbed=barrier_absorbed,
+            missed_count=missed_count,
+            interrupted_count=interrupted_count,
+            evaded_count=evaded_count,
+            blocked_count=blocked_count,
+            dodged_count=dodged_count,
+            downs_count=downs_count,
+            downed_damage_taken=downed_damage_taken,
+            dead_count=dead_count,
+            # Support granular stats
+            cleanses_other=cleanses_other,
+            cleanses_self=cleanses_self,
+            cleanses_time_other=cleanses_time_other,
+            cleanses_time_self=cleanses_time_self,
+            resurrects=resurrects,
+            resurrect_time=resurrect_time,
+            stun_breaks=stun_breaks,
+            stun_break_time=stun_break_time,
+            strips_time=strips_out_time,
+            # Gameplay stats
+            time_wasted=time_wasted,
+            time_saved=time_saved,
+            weapon_swaps=weapon_swaps,
+            stack_dist=stack_dist,
+            dist_to_com=dist_to_com,
+            anim_percent=anim_percent,
+            anim_no_auto_percent=anim_no_auto_percent,
+            # Active time tracking
+            dead_duration_ms=dead_duration_ms,
+            dc_duration_ms=dc_duration_ms,
+            active_ms=active_ms,
+            presence_pct=(active_ms / duration_ms * 100.0) if duration_ms else 0.0,
         )
 
-        # Attach non-persisted calibration fields for EI alignment (future-proofing)
-        ps.dead_duration_ms = dead_duration_ms
-        ps.dc_duration_ms = dc_duration_ms
-        ps.active_ms = active_ms
-        ps.presence = (active_ms / duration_ms * 100.0) if duration_ms else None
-        ps.presence_pct = ps.presence
+        # Attach non-persisted fields for runtime use (boon graph states for debugging)
         ps.boon_states = boon_graph_states
-        ps.barrier_absorbed = barrier_absorbed
-        ps.missed_count = missed_count
-        ps.interrupted_count = interrupted_count
-        ps.evaded_count = evaded_count
-        ps.blocked_count = blocked_count
-        ps.dodged_count = dodged_count
-        ps.downs_count = downs_count
-        ps.downed_damage_taken = downed_damage_taken
-        ps.dead_count = dead_count
-        # Combat summaries (table columns)
-        ps.downs = downs
-        ps.kills = kills
-        ps.deaths = deaths
-        ps.cleanses_other = cleanses_other
-        ps.cleanses_self = cleanses_self
-        ps.resurrects = resurrects
-        ps.resurrect_time = resurrect_time
-        ps.stun_breaks = stun_breaks
-        ps.stun_break_time = stun_break_time
-        ps.strips_time = strips_out_time
-        ps.cleanses_time_other = cleanses_time_other
-        ps.cleanses_time_self = cleanses_time_self
-        ps.time_wasted = time_wasted
-        ps.time_saved = time_saved
-        ps.weapon_swaps = weapon_swaps
-        ps.stack_dist = stack_dist
-        ps.dist_to_com = dist_to_com
-        ps.anim_percent = anim_percent
-        ps.anim_no_auto_percent = anim_no_auto_percent
 
         return ps
     # Allies
