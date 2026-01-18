@@ -485,9 +485,9 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
         barrier_absorbed = int(_col(phase_def, idx, 1, _safe_get(defense, "damageBarrier", 0)))
         missed_count = int(_col(phase_def, idx, 2, _safe_get(defense, "missedCount", _safe_get(combat_stats, "missed", 0))))
         interrupted_count = int(_col(phase_def, idx, 3, _safe_get(defense, "interruptedCount", _safe_get(combat_stats, "interrupts", 0))))
-        evaded_count = int(_col(phase_def, idx, 6, _safe_get(combat_stats, "evaded", _safe_get(defense, "evadedCount", 0))))
-        blocked_count = int(_col(phase_def, idx, 7, _safe_get(combat_stats, "blocked", _safe_get(defense, "blockedCount", 0))))
-        dodged_count = int(_col(phase_def, idx, 8, _safe_get(combat_stats, "dodgeCount", _safe_get(defense, "dodgeCount", 0))))
+        evaded_count = int(_col(phase_def, idx, 6, _safe_get(defense, "evadedCount", _safe_get(combat_stats, "evaded", 0))))
+        blocked_count = int(_col(phase_def, idx, 7, _safe_get(defense, "blockedCount", _safe_get(combat_stats, "blocked", 0))))
+        dodged_count = int(_col(phase_def, idx, 8, _safe_get(defense, "dodgeCount", _safe_get(combat_stats, "dodgeCount", 0))))
         downs_count = int(_to_number(_col(phase_def, idx, 13, _safe_get(defense, "downCount", _safe_get(combat_stats, "downed", 0))), 0))
         downed_damage_taken = int(_col(phase_def, idx, 14, _safe_get(defense, "downedDamageTaken", 0)))
         # defStats[15] contains text like "100% Alive", use defense dict instead
