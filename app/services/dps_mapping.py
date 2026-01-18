@@ -468,12 +468,12 @@ def map_dps_json_to_models(json_data: Dict[str, Any]) -> MappedFight:
 
         total_damage = int(_col(phase_dps, idx, 0, _safe_get(dps_total, "damage", 0)))
         dps = float(total_damage)
-        downs_val = _col(phase_def, idx, 13, _safe_get(defense, "downCount", _safe_get(defense, "downs", 0)))
-        deaths_val = _col(phase_def, idx, 15, _safe_get(defense, "deadCount", _safe_get(defense, "dead", 0)))
-        downs = int(_to_number(downs_val, 0))
-        # deaths_val from defStats[15] is often text like "100% Alive", extract from defense dict instead
+        # Downs = enemy players downed by this player (from statsAll.downed)
+        downs = int(_safe_get(combat_stats, "downed", 0))
+        # Kills = enemy players killed by this player (from statsAll.killed)
+        kills = int(_safe_get(combat_stats, "killed", 0))
+        # Deaths = times this player died (from defenses.deadCount)
         deaths = int(_safe_get(defense, "deadCount", _safe_get(defense, "dead", 0)))
-        kills = int(_safe_get(dps_total, "kills", 0))
         damage_taken = int(_col(phase_def, idx, 0, _safe_get(defense, "damageTaken", 0)))
         cleanses = int(_safe_get(support, "condiCleanse", _safe_get(defense, "condiCleanse", 0)))
         strips_out = int(_safe_get(support, "boonStrips", _safe_get(defense, "boonStrips", 0)))
