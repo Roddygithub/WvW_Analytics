@@ -90,7 +90,7 @@ def process_log_file_sync(
         (fight_record, error_message)
     """
     from app.parser.evtc_parser import EVTCParseError  # legacy fallback only
-    from app.services.roles_service import detect_player_role
+    from app.services.roles_service_v2 import detect_player_role
 
     is_valid, error = validate_evtc_file(file_path)
     if not is_valid:
