@@ -57,6 +57,38 @@ ALLIED_NUMERIC_COLUMNS = [
     {"key": "cc_total", "label": "CC", "attr": "cc_total"},
 ]
 
+# Defensive stats columns
+DEFENSIVE_COLUMNS = [
+    {"key": "barrier_absorbed", "label": "Barrier", "attr": "barrier_absorbed"},
+    {"key": "evaded_count", "label": "Evaded", "attr": "evaded_count"},
+    {"key": "blocked_count", "label": "Blocked", "attr": "blocked_count"},
+    {"key": "dodged_count", "label": "Dodged", "attr": "dodged_count"},
+    {"key": "missed_count", "label": "Missed", "attr": "missed_count"},
+    {"key": "interrupted_count", "label": "Interrupted", "attr": "interrupted_count"},
+    {"key": "downs_count", "label": "Downed", "attr": "downs_count"},
+    {"key": "downed_damage_taken", "label": "Downed Dmg", "attr": "downed_damage_taken"},
+]
+
+# Support stats columns
+SUPPORT_COLUMNS = [
+    {"key": "cleanses_other", "label": "Cleanses (Other)", "attr": "cleanses_other"},
+    {"key": "cleanses_self", "label": "Cleanses (Self)", "attr": "cleanses_self"},
+    {"key": "resurrects", "label": "Resurrects", "attr": "resurrects"},
+    {"key": "resurrect_time", "label": "Res Time (s)", "attr": "resurrect_time"},
+    {"key": "stun_breaks", "label": "Stun Breaks", "attr": "stun_breaks"},
+    {"key": "healing_out", "label": "Healing", "attr": "healing_out"},
+    {"key": "barrier_out", "label": "Barrier Out", "attr": "barrier_out"},
+]
+
+# Gameplay stats columns
+GAMEPLAY_COLUMNS = [
+    {"key": "weapon_swaps", "label": "Swaps", "attr": "weapon_swaps"},
+    {"key": "anim_percent", "label": "Animation %", "attr": "anim_percent"},
+    {"key": "stack_dist", "label": "Stack Dist", "attr": "stack_dist"},
+    {"key": "dist_to_com", "label": "Dist to Com", "attr": "dist_to_com"},
+    {"key": "presence_pct", "label": "Presence %", "attr": "presence_pct"},
+]
+
 BOON_GENERATION_COLUMNS = [
     {
         "key": "quickness_out",
@@ -428,6 +460,9 @@ async def view_fight(
             "squad_boon_uptimes": squad_boon_uptimes,
             "allied_players": allied_players_sorted,
             "allied_numeric_columns": ALLIED_NUMERIC_COLUMNS,
+            "defensive_columns": DEFENSIVE_COLUMNS,
+            "support_columns": SUPPORT_COLUMNS,
+            "gameplay_columns": GAMEPLAY_COLUMNS,
             "allied_sort": allied_sort_key,
             "allied_sort_dir": allied_sort_dir,
             "allied_sort_links": allied_sort_links,

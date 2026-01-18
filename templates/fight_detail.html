@@ -284,6 +284,127 @@
     </div>
 </div>
 
+<!-- Defensive Stats Section -->
+<div class="bg-surface-elevated border border-border-subtle rounded overflow-hidden mb-32">
+    <div class="p-24 border-b border-border-subtle">
+        <h2 class="text-lg font-bold text-text-main">Defensive Stats</h2>
+        <p class="text-sm text-text-muted">Damage mitigation and defensive metrics</p>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm sortable">
+            <thead class="bg-surface-base border-b border-border-subtle">
+                <tr class="text-left">
+                    <th class="px-16 py-12 font-semibold text-text-main">Character</th>
+                    <th class="px-16 py-12 font-semibold text-text-main">Class</th>
+                    {% for column in defensive_columns %}
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular" data-type="number">
+                        {{ column.label }}
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for player in allied_players %}
+                <tr class="border-b border-border-subtle hover:bg-surface-base transition-colors">
+                    <td class="px-16 py-12 text-text-main">{{ player.character_name }}</td>
+                    <td class="px-16 py-12 text-text-main text-sm">{{ player.spec_name or player.profession or 'Unknown' }}</td>
+                    {% for column in defensive_columns %}
+                    {% set value = player|attr(column.attr) %}
+                    <td class="px-16 py-12 text-right font-tabular {% if value > 0 %}text-text-main{% else %}text-text-muted{% endif %}">
+                        {{ '{:,.0f}'.format(value) if value else '0' }}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Support Stats Section -->
+<div class="bg-surface-elevated border border-border-subtle rounded overflow-hidden mb-32">
+    <div class="p-24 border-b border-border-subtle">
+        <h2 class="text-lg font-bold text-text-main">Support Stats</h2>
+        <p class="text-sm text-text-muted">Healing, cleanses, and support actions</p>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm sortable">
+            <thead class="bg-surface-base border-b border-border-subtle">
+                <tr class="text-left">
+                    <th class="px-16 py-12 font-semibold text-text-main">Character</th>
+                    <th class="px-16 py-12 font-semibold text-text-main">Class</th>
+                    {% for column in support_columns %}
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular" data-type="number">
+                        {{ column.label }}
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for player in allied_players %}
+                <tr class="border-b border-border-subtle hover:bg-surface-base transition-colors">
+                    <td class="px-16 py-12 text-text-main">{{ player.character_name }}</td>
+                    <td class="px-16 py-12 text-text-main text-sm">{{ player.spec_name or player.profession or 'Unknown' }}</td>
+                    {% for column in support_columns %}
+                    {% set value = player|attr(column.attr) %}
+                    <td class="px-16 py-12 text-right font-tabular {% if value > 0 %}text-text-main{% else %}text-text-muted{% endif %}">
+                        {% if 'time' in column.key.lower() %}
+                            {{ '{:.1f}'.format(value) if value else '0.0' }}
+                        {% else %}
+                            {{ '{:,.0f}'.format(value) if value else '0' }}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Gameplay Stats Section -->
+<div class="bg-surface-elevated border border-border-subtle rounded overflow-hidden mb-32">
+    <div class="p-24 border-b border-border-subtle">
+        <h2 class="text-lg font-bold text-text-main">Gameplay Stats</h2>
+        <p class="text-sm text-text-muted">Activity metrics and positioning</p>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm sortable">
+            <thead class="bg-surface-base border-b border-border-subtle">
+                <tr class="text-left">
+                    <th class="px-16 py-12 font-semibold text-text-main">Character</th>
+                    <th class="px-16 py-12 font-semibold text-text-main">Class</th>
+                    {% for column in gameplay_columns %}
+                    <th class="px-16 py-12 font-semibold text-text-main text-right font-tabular" data-type="number">
+                        {{ column.label }}
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for player in allied_players %}
+                <tr class="border-b border-border-subtle hover:bg-surface-base transition-colors">
+                    <td class="px-16 py-12 text-text-main">{{ player.character_name }}</td>
+                    <td class="px-16 py-12 text-text-main text-sm">{{ player.spec_name or player.profession or 'Unknown' }}</td>
+                    {% for column in gameplay_columns %}
+                    {% set value = player|attr(column.attr) %}
+                    <td class="px-16 py-12 text-right font-tabular {% if value > 0 %}text-text-main{% else %}text-text-muted{% endif %}">
+                        {% if '%' in column.label %}
+                            {{ '{:.1f}%'.format(value) if value else '0.0%' }}
+                        {% elif 'dist' in column.key.lower() %}
+                            {{ '{:.0f}'.format(value) if value else '0' }}
+                        {% else %}
+                            {{ '{:,.0f}'.format(value) if value else '0' }}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <!-- Enemy Players Section -->
 {% set enemy_players = fight.player_stats | selectattr('is_ally', 'equalto', False) | list %}
 {% if enemy_players %}
