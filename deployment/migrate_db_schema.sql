@@ -1,0 +1,65 @@
+-- Migration SQL pour ajouter les 35 nouvelles colonnes à player_stats
+-- À exécuter sur le serveur distant PostgreSQL
+
+BEGIN;
+
+-- Outgoing boon production (milliseconds given to allies)
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS stab_out_ms BIGINT DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS aegis_out_ms BIGINT DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS protection_out_ms BIGINT DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS quickness_out_ms BIGINT DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS alacrity_out_ms BIGINT DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS superspeed_out_ms BIGINT DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS resistance_out_ms BIGINT DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS might_out_stacks BIGINT DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS fury_out_ms BIGINT DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS regeneration_out_ms BIGINT DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS vigor_out_ms BIGINT DEFAULT 0 NOT NULL;
+
+-- Defensive granular stats (from defStats array)
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS barrier_absorbed BIGINT DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS missed_count INTEGER DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS interrupted_count INTEGER DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS evaded_count INTEGER DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS blocked_count INTEGER DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS dodged_count INTEGER DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS downs_count INTEGER DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS downed_damage_taken BIGINT DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS dead_count INTEGER DEFAULT 0 NOT NULL;
+
+-- Support granular stats (from supportStats array)
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS cleanses_other INTEGER DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS cleanses_self INTEGER DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS cleanses_time_other DOUBLE PRECISION DEFAULT 0.0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS cleanses_time_self DOUBLE PRECISION DEFAULT 0.0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS resurrects INTEGER DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS resurrect_time DOUBLE PRECISION DEFAULT 0.0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS stun_breaks INTEGER DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS stun_break_time DOUBLE PRECISION DEFAULT 0.0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS strips_time DOUBLE PRECISION DEFAULT 0.0 NOT NULL;
+
+-- Gameplay stats (from gameplayStats array)
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS time_wasted DOUBLE PRECISION DEFAULT 0.0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS time_saved DOUBLE PRECISION DEFAULT 0.0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS weapon_swaps INTEGER DEFAULT 0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS stack_dist DOUBLE PRECISION DEFAULT 0.0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS dist_to_com DOUBLE PRECISION DEFAULT 0.0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS anim_percent DOUBLE PRECISION DEFAULT 0.0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS anim_no_auto_percent DOUBLE PRECISION DEFAULT 0.0 NOT NULL;
+
+-- Active time tracking (for weighted averages)
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS dead_duration_ms DOUBLE PRECISION DEFAULT 0.0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS dc_duration_ms DOUBLE PRECISION DEFAULT 0.0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS active_ms DOUBLE PRECISION DEFAULT 0.0 NOT NULL;
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS presence_pct DOUBLE PRECISION DEFAULT 0.0 NOT NULL;
+
+-- Role detection
+ALTER TABLE player_stats ADD COLUMN IF NOT EXISTS detected_role VARCHAR;
+
+COMMIT;
+
+-- Vérifier les colonnes ajoutées
+SELECT column_name, data_type, is_nullable, column_default
+FROM information_schema.columns
+WHERE table_name = 'player_stats'
+ORDER BY ordinal_position;
